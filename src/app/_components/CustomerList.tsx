@@ -131,25 +131,25 @@ export function CustomerList() {
                         {customer.thumbnailUrl ? (
                           <Image
                             src={customer.thumbnailUrl}
-                            alt={customer.name}
+                            alt={customer.name ?? "Unknown"}
                             width={40}
                             height={40}
                             className="h-10 w-10 rounded-full object-cover"
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500">
-                            {customer.name.charAt(0).toUpperCase()}
+                            {customer.name?.charAt(0).toUpperCase() ?? "U"}
                           </div>
                         )}
                       </div>
                       <div className="ml-4">
-                        <div className="font-medium text-gray-900">{customer.name}</div>
+                        <div className="font-medium text-gray-900">{customer.name ?? "Unknown"}</div>
                       </div>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="text-sm text-gray-900">{customer.email}</div>
-                    <div className="text-sm text-gray-500">{customer.phone || "—"}</div>
+                    <div className="text-sm text-gray-500">{customer.phone ?? "—"}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     <div>Created: {formatDate(customer.createdAt)}</div>

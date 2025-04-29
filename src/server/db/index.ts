@@ -57,12 +57,8 @@ try {
   // Log success
   console.log("Database connection initialized successfully");
 } catch (error) {
-  // Log error for debugging
-  console.error("Failed to initialize database connection:", error);
-  
-  // Create a fallback connection that will throw clear errors
-  const errorConn = postgres("postgres://localhost:5432/fallback");
-  db = drizzle(errorConn, { schema });
+  console.error("Database connection error:", error);
+  throw error;
 }
 
 // Export the database instance

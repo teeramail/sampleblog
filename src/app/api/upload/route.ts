@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { uploadToS3 } from "~/server/lib/s3";
 import type { ImageType } from "~/server/lib/s3";
 

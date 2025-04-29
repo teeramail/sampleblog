@@ -8,6 +8,8 @@ export interface FileRequest extends NextApiRequest {
   };
 }
 
+type FileMap = Record<string, File>;
+
 export const parseMultipartForm = async (
   req: FileRequest
 ): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
@@ -19,7 +21,11 @@ export const parseMultipartForm = async (
 
     form.parse(req, (err, fields, files) => {
       if (err) reject(err);
-      resolve({ fields, files });
+      if (!files || Object.keys(files).length === 0) {
+        reject(new Error("No file uploaded"));
+      } else {
+        resolve({ fields, files });
+      }
     });
   });
 };

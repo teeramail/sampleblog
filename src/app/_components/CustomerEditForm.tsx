@@ -57,9 +57,9 @@ export function CustomerEditForm({
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone || "",
+      name: customer?.name ?? "",
+      email: customer?.email ?? "",
+      phone: customer?.phone ?? "",
     },
   });
 

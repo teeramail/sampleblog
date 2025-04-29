@@ -53,7 +53,8 @@ export const customerRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const { limit, cursor } = input;
+        const limit = input?.limit ?? 10;
+        const cursor = input?.cursor ?? undefined;
         let items = [];
         
         // Handle pagination with cursor
