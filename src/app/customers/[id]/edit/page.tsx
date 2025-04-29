@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { api } from "~/trpc/react";
 import { CustomerEditForm } from "~/app/_components/CustomerEditForm";
 
-interface CustomerEditPageProps {
-  params: {
-    id: string;
-  };
-}
+// No need for params prop in client components when using useParams hook
 
-export default function CustomerEditPage({ params }: CustomerEditPageProps) {
+export default function CustomerEditPage() {
   const router = useRouter();
+  const params = useParams();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Get the customer ID directly from params
-  const customerId = params.id;
+  // Use the useParams hook to safely access route parameters
+  const customerId = params?.id ? String(params.id) : '';
 
   const { data: customer, isLoading } = api.customer.getById.useQuery(
     { id: customerId }

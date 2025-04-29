@@ -1,24 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { api } from "~/trpc/react";
 import { DeleteConfirmation } from "~/app/_components/DeleteConfirmation";
 
-interface CustomerDetailPageProps {
-  params: {
-    id: string;
-  };
-}
+// No need for params prop in client components when using useParams hook
 
-export default function CustomerDetailPage({ params }: CustomerDetailPageProps) {
+export default function CustomerDetailPage() {
   const router = useRouter();
+  const params = useParams();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
-  // Get the customer ID directly from params
-  const customerId = params.id;
+  // Use the useParams hook to safely access route parameters
+  const customerId = params?.id ? String(params.id) : '';
   
   // Fetch customer data
   const { data: customer, error } = api.customer.getById.useQuery(
