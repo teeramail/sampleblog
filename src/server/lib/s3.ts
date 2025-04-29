@@ -33,8 +33,9 @@ const generateUniqueFilename = (originalFilename: string) => {
 
 // Build S3 key with proper folder structure
 const buildS3Key = (customerId: string, filename: string, type: ImageType) => {
+  const rootFolder = env.AWS_S3_ROOT_FOLDER;
   const folder = type === "thumbnail" ? "thumbnail" : "images";
-  return `customer/${customerId}/${folder}/${filename}`;
+  return `${rootFolder}/customer/${customerId}/${folder}/${filename}`;
 };
 
 // Validate file size based on type
@@ -87,7 +88,8 @@ export const deleteFromS3 = async (key: string): Promise<void> => {
 
 // Count existing images for a customer
 export const countCustomerImages = async (customerId: string): Promise<number> => {
-  const prefix = `customer/${customerId}/images/`;
+  const rootFolder = env.AWS_S3_ROOT_FOLDER;
+  const prefix = `${rootFolder}/customer/${customerId}/images/`;
   let count = 0;
 
   try {
