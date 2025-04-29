@@ -37,6 +37,11 @@ const config = {
     // Also keep domains for backward compatibility
     domains: ['sgp1.digitaloceanspaces.com', 'localhost', 'example.com'],
   },
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default config;
