@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["realestate_*"],
+  // Removed table filter to allow working with existing database structure
 } satisfies Config;

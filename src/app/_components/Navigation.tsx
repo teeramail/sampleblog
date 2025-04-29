@@ -1,14 +1,8 @@
-import "~/styles/globals.css";
+"use client";
 
-import { Geist } from "next/font/google";
 import Link from "next/link";
 
-import { TRPCReactProvider } from "~/trpc/react";
-
-// Metadata is defined in metadata.ts
-
-// Simple navigation component defined inline to avoid import issues
-function Navigation() {
+export function Navigation() {
   return (
     <header className="bg-white shadow">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -33,23 +27,5 @@ function Navigation() {
         </div>
       </div>
     </header>
-  );
-}
-
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en" className={geist.variable} style={{filter: "invert(0)"}}>
-      <body className="min-h-screen bg-gray-50">
-        <Navigation />
-        <TRPCReactProvider>{children}</TRPCReactProvider>
-      </body>
-    </html>
   );
 }

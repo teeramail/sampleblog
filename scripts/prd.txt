@@ -1,0 +1,117 @@
+# Product Requirements Document: Customer Management App
+
+## Overview
+Build a Customer Management application using the T3 Stack (Next.js + tRPC + Drizzle + PostgreSQL) with basic CRUD operations and image uploads.
+
+## Technology Stack
+- Frontend & API: Next.js + tRPC
+- Database & ORM: PostgreSQL managed via Drizzle ORM
+- Storage: AWS S3 for image uploads
+
+## Database
+- PostgreSQL connection string (Neon):
+  ```
+  postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/realsamui?sslmode=require
+  ```
+- Schema managed with Drizzle
+- Entity: `Customer` with fields:
+  - `id` (UUID, PK)
+  - `name` (string)
+  - `email` (string, unique)
+  - `phone` (string)
+  - `thumbnailUrl` (string)
+  - `imageUrls` (string[])
+  - `createdAt` (timestamp)
+  - `updatedAt` (timestamp)
+
+## Features
+1. CRUD operations for `Customer`:
+   - **Create**: Add new customer
+   - **Read**: List customers (ordered by `updatedAt` desc) and view detail
+   - **Update**: Edit existing customer
+   - **Delete**: Remove customer
+   - **Search**: Filter by name/email
+2. Image uploads per customer:
+   - **Thumbnail**: single image ≤ 30 KB
+   - **Normal images**: up to 10 images, each ≤ 120 KB
+   - Upload to AWS S3; `.env` already contains S3 credentials
+   - Store URLs in DB
+
+## Schema Validation (IMPORTANT)
+1. **ALWAYS verify schema match**: Before starting development, ensure Drizzle schema exactly matches PostgreSQL database schema
+2. **Use fetch-schema.ts**: Run `npx tsx scripts/fetch-schema.ts` to inspect actual database schema
+3. **Common mismatch issues**:
+   - Array types: PostgreSQL shows as `ARRAY` while Drizzle uses `text().array()`
+   - Default values: Database triggers vs. Drizzle ORM handlers
+   - Column nullability: Ensure NULL/NOT NULL matches between schemas
+4. **Connection issues**: Schema mismatches can cause `ECONNREFUSED` and other database errors
+5. **Validation process**:
+   - Run fetch-schema.ts to get actual database schema
+   - Compare with Drizzle schema definition
+   - Fix any discrepancies before proceeding
+   - Test database operations after schema changes
+
+## Image Configuration & S3 Integration
+1. **Next.js Image Configuration**:
+   - Configure `next.config.js` to allow external image domains:
+   ```javascript
+   const config = {
+     images: {
+       remotePatterns: [
+         {
+           protocol: 'https',
+           hostname: 'sgp1.digitaloceanspaces.com', // Or your S3 domain
+           port: '',
+           pathname: '/yourbucketname/**',
+         },
+       ],
+     },
+   };
+   ```
+   - Prefer `remotePatterns` over deprecated `domains` property
+   - Include all necessary domains for development and production
+
+2. **S3/DigitalOcean Spaces Setup**:
+   - Make uploaded files publicly accessible with `ACL: 'public-read'`:
+   ```typescript
+   const command = new PutObjectCommand({
+     Bucket: env.AWS_S3_BUCKET,
+     Key: key,
+     Body: file,
+     ContentType: contentType,
+     ACL: 'public-read', // Critical for public access
+   });
+   ```
+   - Organize files with consistent folder structure: `customer/{customerId}/{type}/{filename}`
+   - Validate file sizes individually (not cumulatively): 30KB for thumbnails, 120KB for images
+   - Generate unique filenames with timestamps to prevent collisions
+
+3. **File Upload Implementation**:
+   - Use API routes for secure server-side uploads (not direct client-to-S3)
+   - Validate files individually on both client and server
+   - Return complete URLs from upload endpoints
+   - Handle errors gracefully with specific error messages
+   - Filter out empty strings from arrays before database operations
+
+## Next.js App Router Best Practices
+1. **React.use() for Params**:
+   - Extract params safely to avoid direct access warnings:
+   ```typescript
+   // Recommended approach
+   const customerId = String(params.id);
+   ```
+   - Future Next.js versions will require unwrapping params with React.use()
+
+2. **Component Structure**:
+   - Keep metadata exports in separate files, not in client components
+   - Move font variables to HTML tag to prevent hydration mismatches
+   - Use proper error boundaries and loading states
+
+## Next Steps
+1. Scaffold T3 project
+2. Define Drizzle schema and **validate against actual database schema**
+3. Implement tRPC routers and Next.js pages
+4. Configure AWS S3 upload logic with public read access
+5. Set up Next.js image configuration in next.config.js
+6. Add pagination, validation, error handling
+7. Write tests

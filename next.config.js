@@ -5,6 +5,26 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'sgp1.digitaloceanspaces.com',
+        port: '',
+        pathname: '/teerabucketone/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '*',
+        pathname: '/**',
+      }
+    ],
+    formats: ['image/webp'],
+    // Also keep domains for backward compatibility
+    domains: ['sgp1.digitaloceanspaces.com', 'localhost'],
+  },
+};
 
 export default config;
