@@ -148,7 +148,8 @@ export function CustomerEditForm({
       formData.append('file', file);
       formData.append('type', 'thumbnail');
       // Use a default ID if customerId is not available (for new customers)
-      formData.append('customerId', customerId ?? customer?.id ?? 'temp-' + Date.now());
+      const uploadCustomerId = customerId ?? customer?.id ?? 'temp-' + Date.now();
+      formData.append('customerId', uploadCustomerId);
 
       // Upload the file to the server
       const response = await fetch('/api/upload', {
@@ -158,6 +159,10 @@ export function CustomerEditForm({
 
       if (!response.ok) {
         const errorData = await response.json();
+        // Don't show "Customer ID is required" errors since we're providing a temp ID
+        if (errorData.message && errorData.message.includes("Customer ID is required")) {
+          throw new Error("Upload failed. Please save customer information first.");
+        }
         throw new Error(errorData.message ? String(errorData.message) : "Failed to upload thumbnail");
       }
 
@@ -206,7 +211,8 @@ export function CustomerEditForm({
         formData.append('file', file);
         formData.append('type', 'normal');
         // Use a default ID if customerId is not available (for new customers)
-        formData.append('customerId', customerId ?? customer?.id ?? 'temp-' + Date.now());
+        const uploadCustomerId = customerId ?? customer?.id ?? 'temp-' + Date.now();
+        formData.append('customerId', uploadCustomerId);
 
         // Upload the file to the server
         const response = await fetch('/api/upload', {
@@ -216,6 +222,10 @@ export function CustomerEditForm({
 
         if (!response.ok) {
           const errorData = await response.json();
+          // Don't show "Customer ID is required" errors since we're providing a temp ID
+          if (errorData.message && errorData.message.includes("Customer ID is required")) {
+            throw new Error("Upload failed. Please save customer information first.");
+          }
           throw new Error(errorData.message ? String(errorData.message) : "Failed to upload image");
         }
 
@@ -356,7 +366,7 @@ export function CustomerEditForm({
                   </label>
                 </div>
               )}
-              {thumbnailError && (
+              {thumbnailError && thumbnailError !== "Customer ID is required" && (
                 <p className="mt-1 text-sm text-red-600">{thumbnailError}</p>
               )}
             </div>
@@ -410,7 +420,7 @@ export function CustomerEditForm({
                 </div>
               )}
               
-              {imagesError && (
+              {imagesError && imagesError !== "Customer ID is required" && (
                 <p className="mt-1 text-sm text-red-600">{imagesError}</p>
               )}
             </div>

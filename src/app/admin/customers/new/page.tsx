@@ -10,10 +10,12 @@ export default function AdminNewCustomerPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Generate a temporary ID for uploads before the customer is created
+  const tempCustomerId = `temp-${Date.now()}`;
 
   // Empty customer template for new customer form
   const emptyCustomer = {
-    id: "",
+    id: tempCustomerId,
     name: "",
     email: "",
     phone: null,
@@ -74,6 +76,7 @@ export default function AdminNewCustomerPage() {
           customer={emptyCustomer}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          customerId={tempCustomerId}
         />
       </div>
     </div>
