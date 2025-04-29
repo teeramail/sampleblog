@@ -69,14 +69,8 @@ export function CustomerList() {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Customers</h1>
-        <Link
-          href="/customers/new"
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Add Customer
-        </Link>
       </div>
       
       <div className="mb-6">
