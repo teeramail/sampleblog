@@ -1,4 +1,4 @@
-CREATE TABLE "realestate_customer" (
+CREATE TABLE "customer" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(256) NOT NULL,
 	"email" varchar(256) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE "realestate_customer" (
 	"updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX "customer_name_idx" ON "realestate_customer" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "customer_email_idx" ON "realestate_customer" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "customer_updated_at_idx" ON "realestate_customer" USING btree ("updatedAt");
+CREATE INDEX "customer_name_idx" ON "customer" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "customer_email_idx" ON "customer" USING btree ("email");--> statement-breakpoint
+CREATE INDEX "customer_updated_at_idx" ON "customer" USING btree ("updatedAt");

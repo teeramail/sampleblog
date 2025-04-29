@@ -1,4 +1,4 @@
-// Simple script to drop all tables in the database
+// Simple script to drop all tables in the database without using session_replication_role
 import pg from 'pg';
 import dotenv from 'dotenv';
 
@@ -49,16 +49,18 @@ async function main() {
     
     console.log(`Found ${tables.length} tables: ${tables.join(', ')}`);
     
-    // Drop tables one by one
+    // Drop each table one by one, not using session_replication_role
     for (const table of tables) {
       try {
-        console.log(`Attempting to drop table: ${table}`);
+        console.log(`Dropping table: ${table}`);
         await client.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
         console.log(`Successfully dropped table: ${table}`);
       } catch (error) {
-        console.error(`Error dropping table ${table}:`, error.message);
+        console.error(`Error dropping table ${table}:`, error);
       }
     }
+    
+    console.log('Tables drop operation completed.');
     
     // Verify that all tables are gone
     const verifyResult = await client.query(`
@@ -70,7 +72,7 @@ async function main() {
     if (verifyResult.rows.length === 0) {
       console.log('Verified: No tables remain in the database.');
     } else {
-      console.warn(`Some tables still exist: ${verifyResult.rows.map(row => row.table_name).join(', ')}`);
+      console.warn(`Warning: Some tables still exist: ${verifyResult.rows.map(row => row.table_name).join(', ')}`);
     }
     
   } catch (error) {

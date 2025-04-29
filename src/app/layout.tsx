@@ -29,6 +29,11 @@ function Navigation() {
                   Customers
                 </Link>
               </li>
+              <li>
+                <Link href="/admin" className="text-gray-600 hover:text-gray-900">
+                  Admin
+                </Link>
+              </li>
             </ul>
           </nav>
         </div>

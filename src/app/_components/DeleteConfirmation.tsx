@@ -9,6 +9,7 @@ interface DeleteConfirmationProps {
   customerName: string;
   isOpen: boolean;
   onClose: () => void;
+  redirectTo?: string;
 }
 
 export function DeleteConfirmation({
@@ -16,6 +17,7 @@ export function DeleteConfirmation({
   customerName,
   isOpen,
   onClose,
+  redirectTo = "/customers",
 }: DeleteConfirmationProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -23,7 +25,7 @@ export function DeleteConfirmation({
 
   const deleteCustomer = api.customer.delete.useMutation({
     onSuccess: () => {
-      router.push("/customers");
+      router.push(redirectTo);
       router.refresh();
     },
     onError: (err) => {

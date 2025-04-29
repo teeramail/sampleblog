@@ -9,16 +9,21 @@ import type { Customer } from "~/types";
 interface CustomerEditWrapperProps {
   customer: Customer;
   customerId: string;
+  redirectTo?: string;
 }
 
-export function CustomerEditWrapper({ customer, customerId }: CustomerEditWrapperProps) {
+export function CustomerEditWrapper({ 
+  customer, 
+  customerId,
+  redirectTo,
+}: CustomerEditWrapperProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateCustomer = api.customer.update.useMutation({
     onSuccess: () => {
-      router.push(`/customers/${customerId}`);
+      router.push(redirectTo ?? `/customers/${customerId}`);
       router.refresh();
     },
     onError: (err) => {

@@ -1,4 +1,4 @@
-// Script to push Drizzle schema to the database using migrations
+// Script to migrate database using Drizzle's migrator
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -30,64 +30,61 @@ console.log(`Working with database: ${dbName}`);
 
 async function main() {
   try {
-    // Create a connection to the database
-    const connectionConfig = {
-      ssl: true,
-      max: 1,
-      idle_timeout: 20,
-      connect_timeout: 10,
-    };
-
     console.log("Connecting to database...");
-    const conn = postgres(dbUrl, connectionConfig);
-    const db = drizzle(conn);
-
-    // Check if the tables exist
-    console.log("Checking existing tables...");
-    const tables = await conn.unsafe(`
+    
+    // Set up the Postgres connection
+    const sql = postgres(dbUrl, {
+      ssl: { rejectUnauthorized: false },
+      max: 1
+    });
+    
+    // Initialize Drizzle ORM
+    const db = drizzle(sql);
+    
+    // Path to the migrations directory
+    const migrationsFolder = path.join(__dirname, "..", "drizzle");
+    console.log(`Using migrations from: ${migrationsFolder}`);
+    
+    // Before migration, check for existing tables
+    const tables = await sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
-    `);
+    `;
     
     if (tables.length > 0) {
       console.log("Existing tables:", tables.map(t => t.table_name).join(", "));
     } else {
-      console.log("No existing tables found.");
+      console.log("No existing tables found. Ready for migration.");
     }
-
-    // Run migrations from the drizzle folder
-    console.log("Running migrations from drizzle directory...");
-    const migrationsFolder = path.join(__dirname, "..", "drizzle");
     
-    try {
-      await migrate(db, { migrationsFolder });
-      console.log("Migrations completed successfully!");
-    } catch (migrationError) {
-      console.error("Error during migration:", migrationError);
-      process.exit(1);
-    }
+    // Run the migrations
+    console.log("Starting migration...");
+    await migrate(db, { migrationsFolder });
+    console.log("Migration completed successfully!");
     
     // Verify tables after migration
-    const verifyTables = await conn.unsafe(`
+    const tablesAfter = await sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
-    `);
+    `;
     
-    console.log("Tables after migration:", verifyTables.map(t => t.table_name).join(", "));
+    console.log("Tables after migration:", tablesAfter.map(t => t.table_name).join(", "));
     
-    console.log("Schema push complete!");
+    // Close the database connection
+    await sql.end();
+    console.log("Database connection closed.");
     
-    // Close the connection
-    await conn.end();
   } catch (error) {
-    console.error("Error pushing schema:", error);
+    console.error("Error during migration:", error);
     process.exit(1);
   }
 }
 
-main().catch((e) => {
-  console.error("Unhandled error during schema push:", e);
-  process.exit(1);
-});
+main()
+  .then(() => console.log("Migration process complete."))
+  .catch(error => {
+    console.error("Unhandled error:", error);
+    process.exit(1);
+  }); 
