@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToS3 } from "~/server/lib/s3";
-import { ImageType } from "~/server/lib/s3";
+import type { ImageType } from "~/server/lib/s3";
 
 // Constants for file size limits
 const MAX_THUMBNAIL_SIZE = 30 * 1024; // 30KB
