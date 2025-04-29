@@ -48,7 +48,7 @@ export function CustomerList() {
   );
   
   const isLoading = isSearchLoading || isCustomersLoading;
-  const error = searchError || customersError;
+  const error = searchError ?? customersError;
   
   // Flatten paginated results
   const customers = searchQuery.length > 0

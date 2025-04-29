@@ -1,14 +1,16 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
+import { type NextApiRequest } from "next";
 import formidable from "formidable";
 import { z } from "zod";
 import type { File } from "formidable";
 
-const uploadSchema = z.object({
+// Make schema available for export if needed later
+export const uploadSchema = z.object({
   type: z.enum(["thumbnail", "normal"]),
   customerId: z.string(),
 });
 
-type UploadedFile = {
+// File type definition for use in other modules
+export type UploadedFile = {
   filepath: string;
   originalFilename: string;
   mimetype: string;
@@ -46,7 +48,8 @@ export const parseMultipartForm = async (
 
     form.parse(req, (err, fields, files) => {
       if (err) {
-        reject(new Error("Failed to parse form data: " + err.message));
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        reject(new Error("Failed to parse form data: " + errorMessage));
         return;
       }
       if (!files || Object.keys(files).length === 0) {

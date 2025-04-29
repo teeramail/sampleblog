@@ -107,7 +107,7 @@ export const customerRouter = createTRPCRouter({
           updatedAt: Date;
         }) => ({
           ...item,
-          imageUrls: item.imageUrls || []
+          imageUrls: item.imageUrls ?? []
         }));
         
         // Set up the next cursor for pagination
@@ -244,7 +244,7 @@ export const customerRouter = createTRPCRouter({
         };
         
         // Delete thumbnail if exists
-        if (customer?.thumbnailUrl) {
+        if (customer && customer.thumbnailUrl) {
           const thumbnailKey = extractKeyFromUrl(customer.thumbnailUrl);
           if (thumbnailKey && thumbnailKey !== customer.thumbnailUrl) {
             deletePromises.push(deleteFromS3(thumbnailKey));
@@ -252,7 +252,7 @@ export const customerRouter = createTRPCRouter({
         }
         
         // Delete old images if they exist
-        if (customer?.imageUrls && customer.imageUrls.length > 0) {
+        if (customer && customer.imageUrls && customer.imageUrls.length > 0) {
           await Promise.all(
             customer.imageUrls.map((url) => deleteFromS3(extractKeyFromUrl(url)))
           );

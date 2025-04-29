@@ -115,7 +115,7 @@ export function CustomerEditForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message ?? "Failed to save customer");
+        throw new Error(errorData.message ? String(errorData.message) : "Failed to save customer");
       }
 
       const savedCustomer: { id: string } = await response.json();
@@ -157,14 +157,15 @@ export function CustomerEditForm({
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as { message: string };
-        throw new Error(errorData.message ?? "Failed to upload thumbnail");
+        const errorData = await response.json();
+        throw new Error(errorData.message ? String(errorData.message) : "Failed to upload thumbnail");
       }
 
-      const data = await response.json() as { url: string };
+      const data = await response.json();
+      const url = typeof data.url === 'string' ? data.url : '';
       
       // Set the thumbnail URL to the S3 URL returned by the server
-      setThumbnailUrl(data.url);
+      setThumbnailUrl(url);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown upload error";
       setThumbnailError(message);
@@ -214,12 +215,12 @@ export function CustomerEditForm({
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as { message: string };
-          throw new Error(errorData.message ?? "Failed to upload image");
+          const errorData = await response.json();
+          throw new Error(errorData.message ? String(errorData.message) : "Failed to upload image");
         }
 
-        const data = await response.json() as { url: string };
-        return data.url;
+        const data = await response.json();
+        return typeof data.url === 'string' ? data.url : '';
       } catch (error) {
         console.error('Error uploading image:', error);
         throw error;
@@ -228,7 +229,7 @@ export function CustomerEditForm({
 
     try {
       // Wait for all uploads to complete
-      const urls = await Promise.all(uploadPromises) as string[];
+      const urls = await Promise.all(uploadPromises);
       setImageUrls([...newImageUrls, ...urls]);
     } catch (error) {
       console.error('Error uploading images:', error);
