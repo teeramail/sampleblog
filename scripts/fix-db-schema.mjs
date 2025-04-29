@@ -16,9 +16,7 @@ if (!dbUrl) {
   process.exit(1);
 }
 
-// Get table prefix from environment
-const tablePrefix = process.env.DB_TABLE_PREFIX || '';
-console.log(`Using table prefix: "${tablePrefix}"`);
+// Log database connection info
 console.log(`Using database URL: ${dbUrl.replace(/\/\/([^:]+):[^@]+@/, "//***:***@")}`);
 
 // Extract database name from URL
@@ -54,7 +52,7 @@ async function main() {
     }
 
     // Check if we need to drop and recreate tables
-    const targetTableName = `${tablePrefix}customer`;
+    const targetTableName = 'customer';
     
     // Drop existing indexes to avoid conflicts
     try {
@@ -63,14 +61,10 @@ async function main() {
       await client.query(`DROP INDEX IF EXISTS "customer_email_idx"`);
       await client.query(`DROP INDEX IF EXISTS "customer_updated_at_idx"`);
       
-      // Also try with prefixes that might exist
+      // Also try with old prefixes that might exist from previous versions
       await client.query(`DROP INDEX IF EXISTS "realestate_customer_name_idx"`);
       await client.query(`DROP INDEX IF EXISTS "realestate_customer_email_idx"`);
       await client.query(`DROP INDEX IF EXISTS "realestate_customer_updated_at_idx"`);
-      
-      await client.query(`DROP INDEX IF EXISTS "customercustomer_name_idx"`);
-      await client.query(`DROP INDEX IF EXISTS "customercustomer_email_idx"`);
-      await client.query(`DROP INDEX IF EXISTS "customercustomer_updated_at_idx"`);
     } catch (error) {
       console.log('Error dropping indexes (this is often normal):', error.message);
     }
@@ -105,12 +99,12 @@ async function main() {
       console.log(`Table "${targetTableName}" already exists, skipping creation.`);
     }
     
-    // Create indexes with the correct prefix
+    // Create indexes
     console.log('Creating indexes...');
     try {
-      await client.query(`CREATE INDEX "${tablePrefix}customer_name_idx" ON "${targetTableName}" USING btree ("name")`);
-      await client.query(`CREATE INDEX "${tablePrefix}customer_email_idx" ON "${targetTableName}" USING btree ("email")`);
-      await client.query(`CREATE INDEX "${tablePrefix}customer_updated_at_idx" ON "${targetTableName}" USING btree ("updatedAt")`);
+      await client.query(`CREATE INDEX "customer_name_idx" ON "${targetTableName}" USING btree ("name")`);
+      await client.query(`CREATE INDEX "customer_email_idx" ON "${targetTableName}" USING btree ("email")`);
+      await client.query(`CREATE INDEX "customer_updated_at_idx" ON "${targetTableName}" USING btree ("updatedAt")`);
     } catch (error) {
       console.log('Error creating indexes (may already exist):', error.message);
     }

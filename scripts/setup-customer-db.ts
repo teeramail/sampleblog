@@ -7,7 +7,6 @@ import { sql } from "drizzle-orm";
 // Log the migration attempt
 console.log("Setting up customer database schema...");
 console.log(`Using database URL: ${env.DATABASE_URL.replace(/\/\/([^:]+):[^@]+@/, "//***:***@")}`);
-console.log(`Using table prefix: "${env.DB_TABLE_PREFIX}"`);
 
 async function main() {
   try {
@@ -42,10 +41,10 @@ async function main() {
       // Drop existing customer tables if they exist
       const customerTables = tables
         .map((t: any) => t.table_name)
-        .filter((name: string) => name.startsWith(env.DB_TABLE_PREFIX));
+        .filter((name: string) => name === "customer");
       
       if (customerTables.length > 0) {
-        console.log(`Dropping existing ${env.DB_TABLE_PREFIX} tables:`, customerTables.join(", "));
+        console.log("Dropping existing customer tables:", customerTables.join(", "));
         
         for (const tableName of customerTables) {
           console.log(`Dropping table: ${tableName}`);
@@ -57,9 +56,9 @@ async function main() {
     }
 
     // Create customer table
-    console.log(`Creating table: ${env.DB_TABLE_PREFIX}customer`);
+    console.log("Creating table: customer");
     await conn.unsafe(`
-      CREATE TABLE "${env.DB_TABLE_PREFIX}customer" (
+      CREATE TABLE "customer" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
         "name" varchar(256) NOT NULL,
         "email" varchar(256) NOT NULL,
@@ -73,22 +72,23 @@ async function main() {
 
     // Create indexes
     console.log("Creating indexes...");
-    await conn.unsafe(`CREATE INDEX "customer_name_idx" ON "${env.DB_TABLE_PREFIX}customer" USING btree ("name")`);
-    await conn.unsafe(`CREATE INDEX "customer_email_idx" ON "${env.DB_TABLE_PREFIX}customer" USING btree ("email")`);
-    await conn.unsafe(`CREATE INDEX "customer_updated_at_idx" ON "${env.DB_TABLE_PREFIX}customer" USING btree ("updatedAt")`);
+    await conn.unsafe(`CREATE INDEX "customer_name_idx" ON "customer" USING btree ("name")`);
+    await conn.unsafe(`CREATE INDEX "customer_email_idx" ON "customer" USING btree ("email")`);
+    await conn.unsafe(`CREATE INDEX "customer_updated_at_idx" ON "customer" USING btree ("updatedAt")`);
 
     // Insert sample data
     console.log("Inserting sample data...");
     await conn.unsafe(`
-      INSERT INTO "${env.DB_TABLE_PREFIX}customer" ("name", "email", "phone")
+      INSERT INTO "customer" ("name", "email", "phone")
       VALUES 
         ('John Doe', 'john@example.com', '+1234567890'),
         ('Jane Smith', 'jane@example.com', '+0987654321')
     `);
 
     // Verify data
-    const customerCount = await conn.unsafe(`SELECT COUNT(*) FROM "${env.DB_TABLE_PREFIX}customer"`);
-    console.log(`Created ${customerCount[0].count} sample customers.`);
+    const customerCount = await conn.unsafe(`SELECT COUNT(*) FROM "customer"`);
+    const count = customerCount?.[0]?.count || 0;
+    console.log(`Created ${count} sample customers.`);
 
     console.log("Schema setup complete!");
     

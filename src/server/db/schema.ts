@@ -5,9 +5,8 @@ import { sql } from "drizzle-orm";
 import { index, pgTableCreator, uuid, varchar, timestamp, text } from "drizzle-orm/pg-core";
 
 /**
- * Flexible table creator that adapts to different database environments.
- * This uses an empty string for table prefix, allowing the schema to work
- * with the current database without any prefix.
+ * Table creator for the application.
+ * Uses direct table names without prefixes.
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
