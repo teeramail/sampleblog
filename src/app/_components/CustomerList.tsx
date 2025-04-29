@@ -123,7 +123,7 @@ export function CustomerList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {customers.map((customer) => (
+              {customers.map((customer: Customer) => (
                 <tr key={customer.id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center">
