@@ -1,6 +1,5 @@
-// Simple script to set up database tables with configurable prefix
-// Usage: node scripts/setup-db.js [prefix]
-// Example: node scripts/setup-db.js "" (for no prefix)
+// Simple script to set up database tables
+// Usage: node scripts/setup-db.js
 
 const { Client } = require('pg');
 const fs = require('fs');
@@ -10,9 +9,7 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
-// Get table prefix from command line argument or use empty string
-const tablePrefix = process.argv[2] || '';
-console.log(`Using table prefix: "${tablePrefix}"`);
+// No table prefix - using direct table names
 
 // Database connection
 const dbUrl = process.env.DATABASE_URL;
@@ -54,8 +51,8 @@ async function main() {
       console.log('No existing tables found');
     }
 
-    // Drop existing tables with the specified prefix if they exist
-    const tableName = `${tablePrefix}customer`;
+    // Drop existing customer table if it exists
+    const tableName = 'customer';
     if (tables.includes(tableName)) {
       console.log(`Dropping existing table: ${tableName}`);
       await client.query(`DROP TABLE IF EXISTS "${tableName}" CASCADE`);
@@ -78,9 +75,9 @@ async function main() {
 
     // Create indexes
     console.log('Creating indexes...');
-    await client.query(`CREATE INDEX "${tablePrefix}customer_name_idx" ON "${tableName}" USING btree ("name")`);
-    await client.query(`CREATE INDEX "${tablePrefix}customer_email_idx" ON "${tableName}" USING btree ("email")`);
-    await client.query(`CREATE INDEX "${tablePrefix}customer_updated_at_idx" ON "${tableName}" USING btree ("updatedAt")`);
+    await client.query(`CREATE INDEX "customer_name_idx" ON "${tableName}" USING btree ("name")`);
+    await client.query(`CREATE INDEX "customer_email_idx" ON "${tableName}" USING btree ("email")`);
+    await client.query(`CREATE INDEX "customer_updated_at_idx" ON "${tableName}" USING btree ("updatedAt")`);
 
     // Insert sample data
     console.log('Inserting sample data...');
