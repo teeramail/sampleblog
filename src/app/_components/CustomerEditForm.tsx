@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 // Constants for file size limits
 const MAX_THUMBNAIL_SIZE = 30 * 1024; // 30KB
@@ -32,7 +34,7 @@ interface CustomerEditFormProps {
     createdAt: Date;
     updatedAt: Date;
   };
-  onSubmit: (data: {
+  onSubmit?: (data: {
     name: string;
     email: string;
     phone?: string;
@@ -46,7 +48,7 @@ interface CustomerEditFormProps {
 export function CustomerEditForm({
   customer,
   onSubmit,
-  isSubmitting,
+  isSubmitting: externalIsSubmitting,
   customerId,
 }: CustomerEditFormProps) {
   // Form state
@@ -63,12 +65,15 @@ export function CustomerEditForm({
     },
   });
 
+  // Local submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Image state
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
-    customer.thumbnailUrl ?? null
+    customer?.thumbnailUrl ?? null
   );
   const [imageUrls, setImageUrls] = useState<string[]>(
-    customer.imageUrls ?? []
+    customer?.imageUrls ?? []
   );
   const [thumbnailError, setThumbnailError] = useState<string | null>(null);
   const [imagesError, setImagesError] = useState<string | null>(null);
@@ -77,13 +82,51 @@ export function CustomerEditForm({
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const imagesInputRef = useRef<HTMLInputElement>(null);
 
+  // Router
+  const router = useRouter();
+
   // Handle form submission
-  const handleFormSubmit = (data: CustomerFormData) => {
-    onSubmit({
-      ...data,
-      thumbnailUrl: thumbnailUrl || undefined,
-      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-    });
+  const handleFormSubmit = async (data: CustomerFormData) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Call the external onSubmit handler if provided
+      if (onSubmit) {
+        await onSubmit({
+          ...data,
+          thumbnailUrl: thumbnailUrl ?? undefined,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        });
+        return;
+      }
+
+      // Otherwise handle submission internally
+      const response = await fetch(`/api/customers/${customer?.id ?? ''}`, {
+        method: customer?.id ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          thumbnailUrl,
+          imageUrls,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as { message: string };
+        throw new Error(errorData.message ?? "Failed to save customer");
+      }
+
+      const savedCustomer = await response.json();
+      toast.success("Customer saved successfully");
+      router.push(`/customers/${savedCustomer.id ?? ''}`);
+    } catch (error) {
+      console.error('Error saving customer:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to save customer");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle thumbnail upload
@@ -105,7 +148,7 @@ export function CustomerEditForm({
       formData.append('file', file);
       formData.append('type', 'thumbnail');
       // Use a default ID if customerId is not available (for new customers)
-      formData.append('customerId', customerId || customer?.id || 'temp-' + Date.now());
+      formData.append('customerId', customerId ?? customer?.id ?? 'temp-' + Date.now());
 
       // Upload the file to the server
       const response = await fetch('/api/upload', {
@@ -162,7 +205,7 @@ export function CustomerEditForm({
         formData.append('file', file);
         formData.append('type', 'normal');
         // Use a default ID if customerId is not available (for new customers)
-        formData.append('customerId', customerId || customer?.id || 'temp-' + Date.now());
+        formData.append('customerId', customerId ?? customer?.id ?? 'temp-' + Date.now());
 
         // Upload the file to the server
         const response = await fetch('/api/upload', {
@@ -377,17 +420,17 @@ export function CustomerEditForm({
       {/* Form Actions */}
       <div className="flex justify-end space-x-4">
         <Link
-          href={`/customers/${customer.id}`}
+          href={customer?.id ? `/customers/${customer.id}` : "/customers"}
           className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
         >
           Cancel
         </Link>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || externalIsSubmitting}
           className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting || externalIsSubmitting ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </form>

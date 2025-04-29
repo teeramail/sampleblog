@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import Link from "next/link";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { Toaster } from 'react-hot-toast';
 
 // Metadata is defined in metadata.ts
 
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50">
         <Navigation />
         <TRPCReactProvider>{children}</TRPCReactProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   );
