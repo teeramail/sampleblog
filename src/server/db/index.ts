@@ -26,7 +26,9 @@ const connectionConfig = {
 console.log("Connecting to PostgreSQL database...");
 
 // Create a simple, reliable connection
-let db;
+// Define the db variable with explicit type from drizzle-orm
+import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+let db: PostgresJsDatabase<typeof schema>;
 try {
   // Extract the database name from the connection URL for logging
   try {
