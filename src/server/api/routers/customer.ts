@@ -95,7 +95,16 @@ export const customerRouter = createTRPCRouter({
         }
         
         // Normalize null imageUrls to empty arrays for the client
-        items = items.map(item => ({
+        items = items.map((item: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          thumbnailUrl: string | null;
+          imageUrls: string[] | null;
+          createdAt: Date;
+          updatedAt: Date;
+        }) => ({
           ...item,
           imageUrls: item.imageUrls || []
         }));
