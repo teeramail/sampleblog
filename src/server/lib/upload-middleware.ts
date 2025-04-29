@@ -1,9 +1,38 @@
-import type { NextApiRequest } from "next";
+import { type NextApiRequest, type NextApiResponse } from "next";
 import formidable from "formidable";
+import { z } from "zod";
 import type { File } from "formidable";
+
+const uploadSchema = z.object({
+  type: z.enum(["thumbnail", "normal"]),
+  customerId: z.string(),
+});
+
+type UploadedFile = {
+  filepath: string;
+  originalFilename: string;
+  mimetype: string;
+};
 
 export interface FileRequest extends NextApiRequest {
   files?: Record<string, File[]>;
+}
+
+export async function parseUploadRequest(
+  req: NextApiRequest,
+): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
+  try {
+    const form = formidable();
+    return await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) reject(new Error("Failed to parse form data"));
+        resolve({ fields, files });
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown upload error";
+    throw new Error(message);
+  }
 }
 
 export const parseMultipartForm = async (

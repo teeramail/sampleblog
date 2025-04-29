@@ -5,6 +5,8 @@ import { api } from "~/trpc/react";
 import Link from "next/link";
 import Image from "next/image";
 
+const defaultAvatarUrl = "/default-avatar.png";
+
 // Define Customer type directly until shared types are properly set up
 type Customer = {
   id: string;
@@ -16,8 +18,6 @@ type Customer = {
   createdAt: Date;
   updatedAt: Date;
 };
-
-
 
 export function CustomerList() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,8 +128,8 @@ export function CustomerList() {
                       <div className="h-10 w-10 flex-shrink-0">
                         {customer.thumbnailUrl ? (
                           <Image
-                            src={customer.thumbnailUrl}
-                            alt={customer.name ?? "Unknown"}
+                            src={customer.thumbnailUrl ?? defaultAvatarUrl}
+                            alt={`${customer.name}'s thumbnail`}
                             width={40}
                             height={40}
                             className="h-10 w-10 rounded-full object-cover"

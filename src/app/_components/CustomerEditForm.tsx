@@ -92,7 +92,7 @@ export function CustomerEditForm({
       
       // Call the external onSubmit handler if provided
       if (onSubmit) {
-        await onSubmit({
+        onSubmit({
           ...data,
           thumbnailUrl: thumbnailUrl ?? undefined,
           imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -114,13 +114,13 @@ export function CustomerEditForm({
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as { message: string };
+        const errorData = await response.json();
         throw new Error(errorData.message ?? "Failed to save customer");
       }
 
-      const savedCustomer = await response.json();
+      const savedCustomer: { id: string } = await response.json();
       toast.success("Customer saved successfully");
-      router.push(`/customers/${savedCustomer.id ?? ''}`);
+      router.push(`/customers/${savedCustomer.id}`);
     } catch (error) {
       console.error('Error saving customer:', error);
       toast.error(error instanceof Error ? error.message : "Failed to save customer");
@@ -166,8 +166,8 @@ export function CustomerEditForm({
       // Set the thumbnail URL to the S3 URL returned by the server
       setThumbnailUrl(data.url);
     } catch (error) {
-      const err = error as Error;
-      setThumbnailError(err.message ?? "Failed to upload thumbnail");
+      const message = error instanceof Error ? error.message : "Unknown upload error";
+      setThumbnailError(message);
       
       // Clear the file input
       if (thumbnailInputRef.current) {

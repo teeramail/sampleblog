@@ -35,11 +35,11 @@ try {
     const dbUrlParts = env.DATABASE_URL.split('/');
     // Make sure we have a valid URL with parts
     if (dbUrlParts.length > 0) {
-      const dbNameWithParams = dbUrlParts[dbUrlParts.length - 1] || '';
+      const dbNameWithParams = dbUrlParts[dbUrlParts.length - 1] ?? '';
       const dbName = dbNameWithParams.split('?')[0];
       console.log(`Connecting to database: ${dbName}`);
     }
-  } catch (_e) {
+  } catch (_) {
     console.log('Could not extract database name from connection string');
   }
   
@@ -63,3 +63,15 @@ try {
 
 // Export the database instance
 export { db };
+
+// Error handling wrapper
+export async function withErrorHandling<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.error("Database operation failed:", error);
+    throw error;
+  }
+}

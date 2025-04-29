@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+import { type Metadata } from "next";
 
 // Define dynamic metadata for the customer detail page
-export async function generateMetadata({ params: _params }: { params: { id: string } }) {
+export const generateMetadata = async ({ params }: { params: { id: string } }): Promise<Metadata> => {
   return {
-    title: "Customer Details | Customer Management",
-    description: "View customer details",
+    title: `Customer ${params.id} - Details`,
+    description: `View and edit details for customer ${params.id}`,
   };
-}
+};

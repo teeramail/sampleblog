@@ -251,15 +251,11 @@ export const customerRouter = createTRPCRouter({
           }
         }
         
-        // Delete all images if they exist
-        const imageUrls = customer?.imageUrls ?? null;
-        if (imageUrls !== null && Array.isArray(imageUrls) && imageUrls.length > 0) {
-          for (const imageUrl of imageUrls) {
-            const imageKey = extractKeyFromUrl(imageUrl);
-            if (imageKey && imageKey !== imageUrl) {
-              deletePromises.push(deleteFromS3(imageKey));
-            }
-          }
+        // Delete old images if they exist
+        if (customer?.imageUrls && customer.imageUrls.length > 0) {
+          await Promise.all(
+            customer.imageUrls.map((url) => deleteFromS3(extractKeyFromUrl(url)))
+          );
         }
         
         // Wait for all delete operations to complete

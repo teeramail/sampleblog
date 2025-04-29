@@ -53,7 +53,9 @@ export default function CustomerDetailPage() {
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Customer Details</h1>
+        <h1 className="text-2xl font-bold">
+          {customer?.name ?? "New Customer"}
+        </h1>
         <div className="flex gap-2">
           <Link
             href={`/customers/${customer.id}/edit`}
@@ -113,7 +115,7 @@ export default function CustomerDetailPage() {
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Phone</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                  {customer.phone || "—"}
+                  {customer.phone ?? "—"}
                 </dd>
               </div>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
