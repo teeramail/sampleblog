@@ -19,11 +19,23 @@ const config = {
         hostname: 'localhost',
         port: '*',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'example.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*',
+        port: '',
+        pathname: '/**',
       }
     ],
     formats: ['image/webp'],
     // Also keep domains for backward compatibility
-    domains: ['sgp1.digitaloceanspaces.com', 'localhost'],
+    domains: ['sgp1.digitaloceanspaces.com', 'localhost', 'example.com'],
   },
 };
 

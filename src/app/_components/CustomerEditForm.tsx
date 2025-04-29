@@ -104,7 +104,8 @@ export function CustomerEditForm({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'thumbnail');
-      formData.append('customerId', customerId || customer.id);
+      // Use a default ID if customerId is not available (for new customers)
+      formData.append('customerId', customerId || customer?.id || 'temp-' + Date.now());
 
       // Upload the file to the server
       const response = await fetch('/api/upload', {
@@ -160,7 +161,8 @@ export function CustomerEditForm({
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', 'normal');
-        formData.append('customerId', customerId || customer.id);
+        // Use a default ID if customerId is not available (for new customers)
+        formData.append('customerId', customerId || customer?.id || 'temp-' + Date.now());
 
         // Upload the file to the server
         const response = await fetch('/api/upload', {

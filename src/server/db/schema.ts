@@ -6,14 +6,13 @@ import { index, pgTableCreator, uuid, varchar, timestamp, text } from "drizzle-o
 
 /**
  * Flexible table creator that adapts to different database environments.
- * This allows the schema to work with any database name without hardcoding.
- * 
- * We're using the 'realestate_' prefix for tables to match the existing database structure.
- * This is necessary because the tables in the database were created with this prefix.
+ * This uses the DB_TABLE_PREFIX from environment variables, allowing the schema
+ * to work with any database structure without code changes.
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `realestate_${name}`);
+import { env } from "~/env";
+export const createTable = pgTableCreator((name) => `${env.DB_TABLE_PREFIX}${name}`);
 
 export const customers = createTable(
   "customer",

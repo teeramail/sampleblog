@@ -17,6 +17,7 @@ export const env = createEnv({
     DB_PASSWORD: z.string().optional(),
     DB_NAME: z.string().optional(),
     DB_SSL_MODE: z.string().optional(),
+    DB_TABLE_PREFIX: z.string().default("realestate_"),
     // AWS S3 Configuration
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
@@ -49,6 +50,7 @@ export const env = createEnv({
     DB_PASSWORD: process.env.DB_PASSWORD,
     DB_NAME: process.env.DB_NAME,
     DB_SSL_MODE: process.env.DB_SSL_MODE,
+    DB_TABLE_PREFIX: process.env.DB_TABLE_PREFIX,
     // AWS S3 Configuration
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
