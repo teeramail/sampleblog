@@ -39,7 +39,7 @@ try {
       const dbName = dbNameWithParams.split('?')[0];
       console.log(`Connecting to database: ${dbName}`);
     }
-  } catch (e) {
+  } catch (_e) {
     console.log('Could not extract database name from connection string');
   }
   

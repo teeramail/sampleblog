@@ -15,7 +15,7 @@ export interface Session {
 }
 
 // Get the auth session from the server context
-export const getServerAuthSession = async (ctx?: {
+export const getServerAuthSession = async (_ctx?: {
   req: GetServerSidePropsContext["req"];
   res: GetServerSidePropsContext["res"];
 }) => {
