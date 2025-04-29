@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { DeleteConfirmation } from "~/app/_components/DeleteConfirmation";
 import type { Customer } from "~/types";
 
@@ -10,7 +9,6 @@ interface CustomerDetailWrapperProps {
 }
 
 export function CustomerDetailWrapper({ customer }: CustomerDetailWrapperProps) {
-  const router = useRouter();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   return (

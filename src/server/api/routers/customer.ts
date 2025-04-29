@@ -27,9 +27,9 @@ export const customerRouter = createTRPCRouter({
         const result = await ctx.db.insert(customers).values({
           name: input.name,
           email: input.email,
-          phone: input.phone || null,
-          thumbnailUrl: input.thumbnailUrl || null,
-          imageUrls: (input.imageUrls?.filter((s) => typeof s === "string" && s.length > 0)) ?? null, // Filter out empty strings for Postgres arrays
+          phone: input.phone ?? null,
+          thumbnailUrl: input.thumbnailUrl ?? null,
+          imageUrls: input.imageUrls?.filter((s) => typeof s === "string" && s.length > 0) ?? null,
         }).returning();
 
         return result[0];
@@ -232,32 +232,30 @@ export const customerRouter = createTRPCRouter({
         // Extract S3 keys from URLs
         const extractKeyFromUrl = (url: string) => {
           const parts = url.split('/');
-          if (parts.length < 4) return url; // Invalid URL format
+          if (parts.length < 4) return url;
           
-          const bucketName = parts[3]; // Assuming URL format: https://endpoint/bucket/key
-          if (!bucketName) return url; // No bucket name
+          const bucketName = parts[3];
+          if (!bucketName) return url;
           
           const bucketIndex = url.indexOf(bucketName);
-          
-          if (bucketIndex === -1) return url; // Bucket name not found
+          if (bucketIndex === -1) return url;
           
           return url.substring(bucketIndex + bucketName.length + 1);
         };
         
         // Delete thumbnail if exists
-        if (customer.thumbnailUrl) {
+        if (customer?.thumbnailUrl) {
           const thumbnailKey = extractKeyFromUrl(customer.thumbnailUrl);
-          // Only delete if we have a valid key
           if (thumbnailKey && thumbnailKey !== customer.thumbnailUrl) {
             deletePromises.push(deleteFromS3(thumbnailKey));
           }
         }
         
         // Delete all images if they exist
-        if (customer.imageUrls && customer.imageUrls.length > 0) {
-          for (const imageUrl of customer.imageUrls) {
+        const imageUrls = customer?.imageUrls ?? null;
+        if (imageUrls !== null && Array.isArray(imageUrls) && imageUrls.length > 0) {
+          for (const imageUrl of imageUrls) {
             const imageKey = extractKeyFromUrl(imageUrl);
-            // Only delete if we have a valid key
             if (imageKey && imageKey !== imageUrl) {
               deletePromises.push(deleteFromS3(imageKey));
             }

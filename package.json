@@ -29,6 +29,7 @@
     "@trpc/client": "^11.0.0",
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
+    "@uploadthing/react": "^7.3.0",
     "drizzle-orm": "^0.41.0",
     "formidable": "^3.5.4",
     "next": "^15.2.3",
@@ -38,6 +39,7 @@
     "react-hook-form": "^7.56.1",
     "server-only": "^0.0.1",
     "superjson": "^2.2.1",
+    "uploadthing": "^7.6.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -65,10 +65,10 @@ export function CustomerEditForm({
 
   // Image state
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
-    customer.thumbnailUrl
+    customer.thumbnailUrl ?? null
   );
   const [imageUrls, setImageUrls] = useState<string[]>(
-    customer.imageUrls || []
+    customer.imageUrls ?? []
   );
   const [thumbnailError, setThumbnailError] = useState<string | null>(null);
   const [imagesError, setImagesError] = useState<string | null>(null);
@@ -114,17 +114,17 @@ export function CustomerEditForm({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to upload thumbnail');
+        const errorData = await response.json() as { message: string };
+        throw new Error(errorData.message ?? "Failed to upload thumbnail");
       }
 
-      const data = await response.json();
+      const data = await response.json() as { url: string };
       
       // Set the thumbnail URL to the S3 URL returned by the server
       setThumbnailUrl(data.url);
     } catch (error) {
-      console.error('Error uploading thumbnail:', error);
-      setThumbnailError(error instanceof Error ? error.message : 'Failed to upload thumbnail');
+      const err = error as Error;
+      setThumbnailError(err.message ?? "Failed to upload thumbnail");
       
       // Clear the file input
       if (thumbnailInputRef.current) {
@@ -171,11 +171,11 @@ export function CustomerEditForm({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to upload image');
+          const errorData = await response.json() as { message: string };
+          throw new Error(errorData.message ?? "Failed to upload image");
         }
 
-        const data = await response.json();
+        const data = await response.json() as { url: string };
         return data.url;
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -185,7 +185,7 @@ export function CustomerEditForm({
 
     try {
       // Wait for all uploads to complete
-      const urls = await Promise.all(uploadPromises);
+      const urls = await Promise.all(uploadPromises) as string[];
       setImageUrls([...newImageUrls, ...urls]);
     } catch (error) {
       console.error('Error uploading images:', error);

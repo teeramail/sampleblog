@@ -2,7 +2,7 @@
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
 import { sql } from "drizzle-orm";
-import { index, pgTableCreator, uuid, varchar, timestamp, text } from "drizzle-orm/pg-core";
+import { index, pgTableCreator } from "drizzle-orm/pg-core";
 
 /**
  * Table creator for the application.

@@ -3,12 +3,8 @@ import formidable from "formidable";
 import type { File } from "formidable";
 
 export interface FileRequest extends NextApiRequest {
-  files?: {
-    [key: string]: File[];
-  };
+  files?: Record<string, File[]>;
 }
-
-type FileMap = Record<string, File>;
 
 export const parseMultipartForm = async (
   req: FileRequest
@@ -20,12 +16,15 @@ export const parseMultipartForm = async (
     });
 
     form.parse(req, (err, fields, files) => {
-      if (err) reject(err);
+      if (err) {
+        reject(new Error("Failed to parse form data: " + err.message));
+        return;
+      }
       if (!files || Object.keys(files).length === 0) {
         reject(new Error("No file uploaded"));
-      } else {
-        resolve({ fields, files });
+        return;
       }
+      resolve({ fields, files });
     });
   });
 };

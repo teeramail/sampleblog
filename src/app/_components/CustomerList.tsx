@@ -21,7 +21,6 @@ type Customer = {
 
 export function CustomerList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
   
   // Use search query if provided, otherwise use paginated getAll
   const {
@@ -58,7 +57,6 @@ export function CustomerList() {
   
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    setCursor(undefined); // Reset pagination when searching
   };
   
   const formatDate = (date: Date) => {
