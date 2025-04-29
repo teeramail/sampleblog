@@ -1,26 +1,48 @@
-import { notFound, redirect } from "next/navigation";
+"use client";
+
+import { useState } from "react";
+import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { api } from "~/trpc/server";
-import { CustomerDetailWrapper } from "~/app/_components/CustomerDetailWrapper";
+import { api } from "~/trpc/react";
+import { DeleteConfirmation } from "~/app/_components/DeleteConfirmation";
 
-export interface PageProps {
-  params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+interface CustomerDetailPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default async function CustomerDetailPage({ params }: PageProps) {
+export default function CustomerDetailPage({ params }: CustomerDetailPageProps) {
+  const router = useRouter();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  // Get the customer ID directly from params
   const customerId = params.id;
   
-  try {
-    // Fetch customer data from server
-    const customer = await api.customer.getById.query({ id: customerId });
-    
-    if (!customer) {
-      return notFound();
-    }
+  // Fetch customer data
+  const { data: customer, error } = api.customer.getById.useQuery(
+    { id: customerId }
+  );
+  
+  // Handle error by redirecting
+  if (error) {
+    router.push("/customers");
+  }
+  
+  if (error) {
+    return notFound();
+  }
+  
+  if (!customer) {
+    return (
+      <div className="container mx-auto flex min-h-screen items-center justify-center px-4 py-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-    // Format dates for display
+  // Format dates for display
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleDateString("en-US", {
         year: "numeric",
@@ -31,26 +53,31 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       });
     };
 
-    return (
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Customer Details</h1>
-          <div className="flex gap-2">
-            <Link
-              href={`/customers/${customer.id}/edit`}
-              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              Edit
-            </Link>
-            <CustomerDetailWrapper customer={customer} />
-            <Link
-              href="/customers"
-              className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
-            >
-              Back to List
-            </Link>
-          </div>
+  return (
+    <main className="container mx-auto px-4 py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Customer Details</h1>
+        <div className="flex gap-2">
+          <Link
+            href={`/customers/${customer.id}/edit`}
+            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
+            Edit
+          </Link>
+          <button
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+          >
+            Delete
+          </button>
+          <Link
+            href="/customers"
+            className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+          >
+            Back to List
+          </Link>
         </div>
+      </div>
 
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:px-6">
@@ -128,9 +155,14 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </dl>
           </div>
         </div>
-      </main>
-    );
-  } catch (error) {
-    redirect('/customers');
-  }
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmation
+        customerId={customer.id}
+        customerName={customer.name}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+      />
+    </main>
+  );
 }
