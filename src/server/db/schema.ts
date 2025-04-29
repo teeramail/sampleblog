@@ -6,13 +6,12 @@ import { index, pgTableCreator, uuid, varchar, timestamp, text } from "drizzle-o
 
 /**
  * Flexible table creator that adapts to different database environments.
- * This uses the DB_TABLE_PREFIX from environment variables, allowing the schema
- * to work with any database structure without code changes.
+ * This uses an empty string for table prefix, allowing the schema to work
+ * with the current database without any prefix.
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-import { env } from "~/env";
-export const createTable = pgTableCreator((name) => `${env.DB_TABLE_PREFIX}${name}`);
+export const createTable = pgTableCreator((name) => `${name}`);
 
 export const customers = createTable(
   "customer",
