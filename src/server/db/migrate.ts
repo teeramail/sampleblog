@@ -20,14 +20,20 @@ if (fs.existsSync(envPath)) {
   dotenv.config();
 }
 
-// For migrations, we need to use the direct connection string
-const DATABASE_URL = "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/realsamui?sslmode=require";
+// Get DATABASE_URL from environment variables
+const DATABASE_URL = process.env.DATABASE_URL;
 
 // This script runs migrations on the database
 async function main() {
   if (!DATABASE_URL) {
     throw new Error("DATABASE_URL is not defined in environment variables");
   }
+  
+  // Extract the database name from the URL for logging
+  const dbUrlParts = DATABASE_URL.split('/');
+  const dbNameWithParams = dbUrlParts[dbUrlParts.length - 1] || '';
+  const dbName = dbNameWithParams.split('?')[0];
+  console.log(`Running migrations on database: ${dbName}`);
   
   const connection = postgres(DATABASE_URL, { 
     max: 1,

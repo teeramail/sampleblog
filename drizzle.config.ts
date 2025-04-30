@@ -1,12 +1,6 @@
-import { type Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
+import { baseConfig } from "./drizzle.config.base";
 
-import { env } from "~/env";
-
-export default {
-  schema: "./src/server/db/schema.ts",
-  dialect: "postgresql",
-  dbCredentials: {
-    url: env.DATABASE_URL,
-  },
-  // Removed table filter to allow working with existing database structure
-} satisfies Config;
+export default defineConfig({
+  ...baseConfig,
+});

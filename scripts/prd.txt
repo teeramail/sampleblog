@@ -11,7 +11,7 @@ Build a Customer Management application using the T3 Stack (Next.js + tRPC + Dri
 ## Database
 - PostgreSQL connection string (Neon):
   ```
-  postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/realsamui?sslmode=require
+  postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/keepdoc?sslmode=require
   ```
 - Schema managed with Drizzle
 - Entity: `Customer` with fields:
