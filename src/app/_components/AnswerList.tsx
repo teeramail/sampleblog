@@ -75,9 +75,7 @@ export function AnswerList({ postId }: AnswerListProps) {
             <div className="flex items-center">
               <div className="mr-2 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-blue-800 font-medium">
-                  {answer.authorName && answer.authorName.length > 0 
-                    ? answer.authorName[0].toUpperCase() 
-                    : 'A'}
+                  {answer.authorName?.charAt(0)?.toUpperCase() ?? 'A'}
                 </span>
               </div>
               <div>
