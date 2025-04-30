@@ -1,7 +1,7 @@
 {
   "projectName": "Default Project",
-  "databaseUrl": "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/keepdoc?sslmode=require",
-  "schemaPath": "../src/server/db/schema",
+  "databaseUrl": "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/realestate?sslmode=require",
+  "schemaPath": "./src/server/db/schema",
   "requireIndexes": true,
   "validateAllTables": true,
   "tables": [
@@ -97,15 +97,39 @@
       "columns": [
         {
           "name": "id",
-          "type": "integer",
+          "type": "uuid",
           "nullable": false,
           "isPrimaryKey": true,
+          "isUnique": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "subject",
+          "type": "character varying",
+          "nullable": false,
+          "isPrimaryKey": false,
           "isUnique": false,
           "default": null
         },
         {
-          "name": "name",
-          "type": "character varying",
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "thumbnailUrl",
+          "type": "text",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "imageUrls",
+          "type": "ARRAY",
           "nullable": true,
           "isPrimaryKey": false,
           "isUnique": false,
@@ -122,20 +146,36 @@
         {
           "name": "updatedAt",
           "type": "timestamp with time zone",
-          "nullable": true,
+          "nullable": false,
           "isPrimaryKey": false,
           "isUnique": false,
-          "default": null
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "isActive",
+          "type": "boolean",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": "true"
         }
       ],
       "indexes": [
         {
-          "name": "name_idx",
-          "definition": "CREATE INDEX name_idx ON public.post USING btree (name)"
+          "name": "post_created_at_idx",
+          "definition": "CREATE INDEX post_created_at_idx ON public.post USING btree (\"createdAt\")"
         },
         {
           "name": "post_pkey",
           "definition": "CREATE UNIQUE INDEX post_pkey ON public.post USING btree (id)"
+        },
+        {
+          "name": "post_subject_idx",
+          "definition": "CREATE INDEX post_subject_idx ON public.post USING btree (subject)"
+        },
+        {
+          "name": "post_updated_at_idx",
+          "definition": "CREATE INDEX post_updated_at_idx ON public.post USING btree (\"updatedAt\")"
         }
       ]
     }
