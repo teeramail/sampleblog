@@ -166,3 +166,84 @@ The Posts Management feature will allow administrators to create, edit, view, an
 - Use the same technology stack as the existing Customer Management feature
 - Follow the same design patterns and UI layout
 - Ensure consistent UX across the admin panel
+
+# Product Requirements Document: Add More Content to Existing Posts Feature
+
+## Overview
+The "Add More Content to Existing Posts" feature allows administrators to append additional content to existing posts without creating new posts or replacing the original content. This preserves the post history while enabling incremental updates.
+
+## Problem Statement
+Currently, when administrators need to update a post with new information, they must either:
+1. Create an entirely new post, which fragments information across multiple entries
+2. Edit the original post, which overwrites the original content and loses history
+3. Manually append content to the existing text, which is cumbersome and doesn't clearly differentiate new from original content
+
+## Goals
+- Enable administrators to easily add new content to existing posts
+- Maintain the original post subject and thumbnail
+- Clearly mark and timestamp when additional content was added
+- Allow adding more images to posts while respecting maximum limits
+- Provide a streamlined interface that only includes necessary fields for appending content
+
+## Non-Goals
+- Changing the database schema
+- Modifying the original post subject or thumbnail
+- Implementing revision control or content versioning
+
+## User Experience Flow
+1. From the Posts listing page, administrator clicks "Add Content" button next to an existing post
+2. Administrator is taken to a simplified form that:
+   - Shows the post subject (non-editable)
+   - Has a text area for additional content
+   - Shows current image count and remaining capacity
+   - Allows uploading additional images
+3. Administrator submits the form
+4. The additional content is appended to the original post with a timestamp marker
+5. Any new images are added to the post's gallery
+6. Administrator is redirected back to the post listing
+
+## Technical Requirements
+1. Add a new API endpoint `appendContent` to the post router
+2. Create a simplified form component for adding content only
+3. Update the post listing UI to include an "Add Content" action
+4. Create a new page for the add content form
+5. Implement proper validation to ensure image limits are respected
+6. Format appended content with timestamp markers
+
+## Data Model
+No changes required to existing database schema:
+- Use existing `content` field (text) to store appended content
+- Use existing `imageUrls` array to store additional images
+- Enforce maximum of 10 images per post
+- Enforce maximum image size of 120KB
+
+## Technical Implementation Details
+1. Backend:
+   - Add appendContent mutation to post router
+   - Format appended content with timestamp
+   - Validate and enforce image limits
+   - Update updatedAt timestamp
+
+2. Frontend:
+   - Create AppendContentForm component
+   - Add "Add Content" button to post listing
+   - Create new page for append content form
+   - Reuse existing image upload functionality
+
+## Success Metrics
+1. Administrators can successfully append new content to existing posts
+2. Original post content remains intact and visible
+3. Added content is clearly distinguished from original content
+4. Image limits are properly enforced
+5. Post history is preserved through timestamped additions
+
+## Timeline
+1. Backend API implementation - 1 day
+2. Frontend components and UI - 2 days 
+3. Testing and refinement - 1 day
+4. Deployment - 0.5 day
+
+## Stakeholders
+- Content editors
+- Admin users
+- Marketing team

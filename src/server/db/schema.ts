@@ -3,6 +3,7 @@
 
 import { sql } from "drizzle-orm";
 import { index, pgTableCreator } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 /**
  * Table creator for the application.
@@ -57,6 +58,9 @@ export const posts = createTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     isActive: d.boolean().default(true).notNull(),
+    // Adding new field to mark this as a question post
+    isQuestion: d.boolean().default(true).notNull(),
+    authorName: d.varchar({ length: 256 }),  // Optional author name
   }),
   (t) => [
     index("post_subject_idx").on(t.subject),
@@ -64,3 +68,40 @@ export const posts = createTable(
     index("post_updated_at_idx").on(t.updatedAt)
   ],
 );
+
+// New table for answers/responses
+export const answers = createTable(
+  "answer",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    postId: d.uuid().notNull().references(() => posts.id, { onDelete: "cascade" }),
+    content: d.text().notNull(),
+    // Define imageUrls as text[] to match PostgreSQL ARRAY type
+    imageUrls: d.text().array(),
+    authorName: d.varchar({ length: 256 }), // Optional responder name
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isVerified: d.boolean().default(false).notNull(), // To mark expert/verified answers
+  }),
+  (t) => [
+    index("answer_post_id_idx").on(t.postId),
+    index("answer_created_at_idx").on(t.createdAt)
+  ],
+);
+
+// Establish relationships
+export const postsRelations = relations(posts, ({ many }) => ({
+  answers: many(answers),
+}));
+
+export const answersRelations = relations(answers, ({ one }) => ({
+  post: one(posts, {
+    fields: [answers.postId],
+    references: [posts.id],
+  }),
+}));

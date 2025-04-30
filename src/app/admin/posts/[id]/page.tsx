@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "~/trpc/react";
+import { AnswerList } from "~/app/_components/AnswerList";
+import { AnswerForm } from "~/app/_components/AnswerForm";
+import { FollowUpQuestionForm } from "~/app/components/FollowUpQuestionForm";
 
 const defaultThumbnailUrl = "https://via.placeholder.com/150x150?text=No+Image";
 
@@ -14,6 +17,7 @@ export default function ViewPostPage() {
   const postId = params.id as string;
   
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAnswerForm, setShowAnswerForm] = useState(false);
   
   const { data: post, isLoading, error } = 
     api.post.getById.useQuery({ id: postId });
@@ -41,6 +45,11 @@ export default function ViewPostPage() {
     });
   };
   
+  const handleQuestionAdded = () => {
+    // Refresh the data to show the new question
+    router.refresh();
+  };
+  
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -61,6 +70,12 @@ export default function ViewPostPage() {
               className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
               Edit
+            </Link>
+            <Link
+              href={`/admin/posts/${postId}/append`}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+            >
+              Append
             </Link>
             <button
               onClick={handleDelete}
@@ -102,6 +117,9 @@ export default function ViewPostPage() {
             <div className="text-sm text-gray-500">
               <div>Created: {formatDate(post.createdAt)}</div>
               <div>Updated: {formatDate(post.updatedAt)}</div>
+              {post.authorName && (
+                <div>Posted by: {post.authorName}</div>
+              )}
             </div>
             
             <div className="rounded-lg bg-gray-50 p-4">
@@ -142,6 +160,37 @@ export default function ViewPostPage() {
                 </div>
               </div>
             )}
+            
+            {/* Answers section */}
+            <div className="rounded-lg bg-gray-50 p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-medium">Answers</h3>
+                <button
+                  onClick={() => setShowAnswerForm(!showAnswerForm)}
+                  className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
+                >
+                  {showAnswerForm ? 'Cancel' : 'Add Answer'}
+                </button>
+              </div>
+              
+              {showAnswerForm && (
+                <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 p-4">
+                  <h4 className="mb-4 text-md font-medium">Your Answer</h4>
+                  <AnswerForm 
+                    postId={postId}
+                    onSuccess={() => setShowAnswerForm(false)}
+                  />
+                </div>
+              )}
+              
+              <AnswerList postId={postId} />
+            </div>
+            
+            {/* Follow-up Question Section */}
+            <div className="rounded-lg bg-gray-50 p-4">
+              <h3 className="mb-4 text-lg font-medium">Add a Follow-up Question</h3>
+              <FollowUpQuestionForm postId={postId} onQuestionAdded={handleQuestionAdded} />
+            </div>
           </div>
         )}
       </div>

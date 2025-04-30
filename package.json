@@ -33,6 +33,7 @@
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
     "@uploadthing/react": "^7.3.0",
+    "date-fns": "^4.1.0",
     "drizzle-orm": "^0.41.0",
     "formidable": "^3.5.4",
     "next": "^15.2.3",

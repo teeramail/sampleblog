@@ -4,6 +4,11 @@ import { TRPCError } from "@trpc/server";
 import { eq, like, or, desc, lt } from "drizzle-orm";
 import { posts } from "~/server/db/schema";
 import { deleteFromS3 } from "~/server/lib/s3";
+import { 
+  MAX_IMAGES_PER_POST,
+  filterValidImageUrls,
+  validateImageAdditionOrThrow
+} from "~/server/api/utils/imageValidation";
 
 // Input validation schemas
 const postInputSchema = z.object({
@@ -12,11 +17,41 @@ const postInputSchema = z.object({
   thumbnailUrl: z.string().min(1, "Thumbnail is required"),
   imageUrls: z.array(z.string()).optional(),
   isActive: z.boolean().default(true),
+  isQuestion: z.boolean().default(true),
+  authorName: z.string().optional(),
 });
 
 const postUpdateSchema = postInputSchema.partial().extend({
   id: z.string().uuid(),
 });
+
+// Schema for follow-up questions
+const followUpQuestionSchema = z.object({
+  relatedPostId: z.string().uuid(),
+  content: z.string().min(1, "Question content is required"),
+  imageUrls: z.array(z.string()).optional(),
+  isQuestion: z.boolean().default(true),
+  authorName: z.string().optional(),
+});
+
+// New schema for appending content to existing posts
+const appendContentSchema = z.object({
+  id: z.string().uuid(),
+  newContent: z.string().min(1, "New content is required"),
+  newImageUrls: z.array(z.string()).optional(),
+});
+
+// Function to format appended content with timestamp
+const formatAppendedContent = (originalContent: string, newContent: string): string => {
+  const timestamp = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  return `${originalContent}\n\n--- Added on ${timestamp} ---\n\n${newContent}`;
+};
 
 export const postRouter = createTRPCRouter({
   // Create a new post
@@ -28,8 +63,12 @@ export const postRouter = createTRPCRouter({
           subject: input.subject,
           content: input.content,
           thumbnailUrl: input.thumbnailUrl,
-          imageUrls: input.imageUrls?.filter((s) => typeof s === "string" && s.length > 0) ?? null,
+          imageUrls: filterValidImageUrls(input.imageUrls).length > 0
+            ? filterValidImageUrls(input.imageUrls)
+            : null,
           isActive: input.isActive,
+          isQuestion: input.isQuestion,
+          authorName: input.authorName || null,
         }).returning();
 
         return result[0];
@@ -38,6 +77,53 @@ export const postRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create post",
+          cause: error,
+        });
+      }
+    }),
+
+  // Add follow-up question
+  addFollowUpQuestion: publicProcedure
+    .input(followUpQuestionSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Get the original post to use its subject
+        const originalPost = await ctx.db.query.posts.findFirst({
+          where: eq(posts.id, input.relatedPostId),
+        });
+        
+        if (!originalPost) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Original post not found",
+          });
+        }
+        
+        // Create a follow-up question with same subject but "[Follow-up]" prefix
+        const subject = `[Follow-up] ${originalPost.subject}`;
+        
+        const result = await ctx.db.insert(posts).values({
+          subject,
+          content: input.content,
+          thumbnailUrl: originalPost.thumbnailUrl, // Reuse thumbnail from original post
+          imageUrls: filterValidImageUrls(input.imageUrls).length > 0
+            ? filterValidImageUrls(input.imageUrls)
+            : null,
+          isActive: true,
+          isQuestion: true, // Always a question
+          authorName: input.authorName || null,
+        }).returning();
+
+        return result[0];
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        console.error("Error in post.addFollowUpQuestion:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create follow-up question",
           cause: error,
         });
       }
@@ -210,13 +296,13 @@ export const postRouter = createTRPCRouter({
           });
         }
         
+        const filteredImageUrls = filterValidImageUrls(updateData.imageUrls);
+        
         const result = await ctx.db.update(posts)
           .set({
             ...updateData,
-            // Use null for empty imageUrls arrays, and filter out empty strings
-            imageUrls: updateData.imageUrls?.filter((s) => typeof s === "string" && s.length > 0).length
-              ? updateData.imageUrls.filter((s) => typeof s === "string" && s.length > 0)
-              : null,
+            // Use null for empty imageUrls arrays, filter out empty strings
+            imageUrls: filteredImageUrls.length > 0 ? filteredImageUrls : null,
             updatedAt: new Date(),
           })
           .where(eq(posts.id, id))
@@ -232,6 +318,66 @@ export const postRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update post",
+          cause: error,
+        });
+      }
+    }),
+
+  // New procedure: Append content to an existing post
+  appendContent: publicProcedure
+    .input(appendContentSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { id, newContent, newImageUrls } = input;
+        
+        // Check if post exists
+        const existingPost = await ctx.db.query.posts.findFirst({
+          where: eq(posts.id, id),
+        });
+        
+        if (!existingPost) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Post not found",
+          });
+        }
+        
+        // Use our validation utility to validate image limits
+        validateImageAdditionOrThrow(
+          existingPost.imageUrls,
+          newImageUrls,
+          newContent
+        );
+        
+        // Format the appended content with a timestamp
+        const originalContent = existingPost.content;
+        const formattedContent = formatAppendedContent(originalContent, newContent);
+        
+        // Combine existing and new image URLs
+        const filteredExistingImageUrls = filterValidImageUrls(existingPost.imageUrls);
+        const filteredNewImageUrls = filterValidImageUrls(newImageUrls);
+        const combinedImageUrls = [...filteredExistingImageUrls, ...filteredNewImageUrls];
+        
+        // Update the post
+        const result = await ctx.db.update(posts)
+          .set({
+            content: formattedContent,
+            imageUrls: combinedImageUrls.length > 0 ? combinedImageUrls : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(posts.id, id))
+          .returning();
+          
+        return result[0];
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        console.error("Error in post.appendContent:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to append content to post",
           cause: error,
         });
       }

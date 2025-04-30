@@ -200,6 +200,12 @@ export function PostList() {
                     >
                       Edit
                     </Link>
+                    <Link
+                      href={`/admin/posts/${post.id}/append`}
+                      className="mr-2 text-indigo-600 hover:text-indigo-900"
+                    >
+                      Append
+                    </Link>
                     <button
                       className="text-red-600 hover:text-red-900 disabled:opacity-50"
                       onClick={() => handleDelete(post.id)}
