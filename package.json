@@ -12,6 +12,8 @@
     "db:studio": "drizzle-kit studio",
     "db:migrate:run": "tsx src/server/db/migrate.ts",
     "db:validate": "tsx scripts/validate-schema.ts",
+    "db:schema:sync": "tsx scripts/schema-sync.ts",
+    "db:schema:generate": "tsx scripts/schema-sync.ts --generate",
     "db:migrate:keepdoc": "drizzle-kit push --config=drizzle.keepdoc.config.ts",
     "db:migrate:customer": "drizzle-kit push --config=drizzle.customer.config.ts",
     "db:migrate:realsamui": "drizzle-kit push --config=drizzle.realsamui.config.ts",
