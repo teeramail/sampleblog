@@ -115,3 +115,54 @@ Build a Customer Management application using the T3 Stack (Next.js + tRPC + Dri
 5. Set up Next.js image configuration in next.config.js
 6. Add pagination, validation, error handling
 7. Write tests
+
+# Posts Management Feature PRD
+
+## Overview
+The Posts Management feature will allow administrators to create, edit, view, and delete posts. Each post will have a subject/title, content text, a thumbnail image, and multiple gallery images (up to 10). Administrators can continue adding posts to existing subjects or create new subjects.
+
+## Requirements
+
+### Database Structure
+- Posts table must store:
+  - ID (primary key)
+  - Subject/title (text, required)
+  - Content (text, required)
+  - Thumbnail image URL (text, required)
+  - Gallery image URLs (array of text, up to 10 images)
+  - Created timestamp
+  - Updated timestamp
+  - Is active flag (boolean)
+
+### Administrative Features
+- View all posts with pagination and search
+- Create new posts with:
+  - Subject/title field
+  - Content text editor
+  - Thumbnail image upload
+  - Multiple image uploads for gallery (max 10)
+  - Option to select existing subject or create new one
+- Edit existing posts:
+  - Update subject, content, thumbnail, and gallery images
+  - Remove specific gallery images
+  - Add new gallery images (up to limit of 10 total)
+- Delete posts
+
+### User Interface
+- Admin dashboard should include a Posts section
+- Posts listing page with search and filter capabilities
+- Post creation form with image upload capabilities
+- Post editing form
+- Confirmation dialog for deletion
+
+## Technical Implementation
+- Extend the existing database schema to include the posts table
+- Create API endpoints for CRUD operations on posts
+- Develop UI components for post management
+- Implement image upload and storage
+- Integrate with existing admin dashboard
+
+## Constraints
+- Use the same technology stack as the existing Customer Management feature
+- Follow the same design patterns and UI layout
+- Ensure consistent UX across the admin panel

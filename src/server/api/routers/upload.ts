@@ -26,6 +26,28 @@ export const uploadRouter = createTRPCRouter({
       }
     }),
 
+  // Get pre-signed URL for post uploads
+  getPostPresignedUrl: publicProcedure
+    .input(
+      z.object({
+        postId: z.string().optional(), // Optional for new posts
+        filename: z.string(),
+        type: z.enum(["thumbnail", "gallery"]),
+      })
+    )
+    .mutation(async ({ input: _ }) => {
+      try {
+        // Implementation will be added when needed for client-side uploads
+        throw new Error("Not implemented");
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate pre-signed URL for post",
+          cause: error,
+        });
+      }
+    }),
+
   // Delete file from S3
   deleteFile: publicProcedure
     .input(

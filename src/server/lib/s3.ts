@@ -14,9 +14,11 @@ const s3Client = new S3Client({
 // Constants
 const MAX_THUMBNAIL_SIZE = 30 * 1024; // 30KB
 const MAX_IMAGE_SIZE = 120 * 1024; // 120KB
-const MAX_IMAGES = 10;
+const MAX_CUSTOMER_IMAGES = 10;
+const MAX_POST_IMAGES = 20;
 
-export type ImageType = "thumbnail" | "normal";
+export type ImageType = "thumbnail" | "normal" | "gallery";
+export type ResourceType = "customer" | "post";
 
 interface UploadResult {
   url: string;
@@ -31,11 +33,18 @@ const generateUniqueFilename = (originalFilename: string) => {
   return `${timestamp}-${random}.${ext}`;
 };
 
-// Build S3 key with proper folder structure
+// Build S3 key with proper folder structure for customer
 const buildS3Key = (customerId: string, filename: string, type: ImageType) => {
   const rootFolder = env.AWS_S3_ROOT_FOLDER;
   const folder = type === "thumbnail" ? "thumbnail" : "images";
   return `${rootFolder}/customer/${customerId}/${folder}/${filename}`;
+};
+
+// Build S3 key with proper folder structure for post
+const buildPostS3Key = (postId: string, filename: string, type: ImageType) => {
+  const rootFolder = env.AWS_S3_ROOT_FOLDER;
+  const folder = type === "thumbnail" ? "thumbnail" : "gallery";
+  return `${rootFolder}/post/${postId ?? "new"}/${folder}/${filename}`;
 };
 
 // Validate file size based on type
@@ -48,8 +57,9 @@ const validateFileSize = (size: number, type: ImageType) => {
 export const uploadToS3 = async (
   file: Buffer,
   filename: string,
-  customerId: string,
-  type: ImageType
+  id: string,
+  type: ImageType,
+  resourceType: ResourceType = "customer"
 ): Promise<UploadResult> => {
   if (!validateFileSize(file.length, type)) {
     throw new Error(
@@ -58,7 +68,9 @@ export const uploadToS3 = async (
   }
 
   const uniqueFilename = generateUniqueFilename(filename);
-  const key = buildS3Key(customerId, uniqueFilename, type);
+  const key = resourceType === "customer" 
+    ? buildS3Key(id, uniqueFilename, type)
+    : buildPostS3Key(id, uniqueFilename, type);
 
   const command = new PutObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
@@ -109,21 +121,53 @@ export const countCustomerImages = async (customerId: string): Promise<number> =
   return count;
 };
 
+// Count existing images for a post
+export const countPostImages = async (postId: string): Promise<number> => {
+  const rootFolder = env.AWS_S3_ROOT_FOLDER;
+  const prefix = `${rootFolder}/post/${postId}/gallery/`;
+  let count = 0;
+
+  try {
+    // List objects with the post's gallery prefix
+    const command = new ListObjectsV2Command({
+      Bucket: env.AWS_S3_BUCKET,
+      Prefix: prefix,
+    });
+
+    const response = await s3Client.send(command);
+    count = response.Contents?.length ?? 0;
+  } catch (error) {
+    console.error("Error counting post images:", error);
+    throw error;
+  }
+
+  return count;
+};
+
 // Validate and upload multiple images
 export const uploadMultipleImages = async (
   files: Array<{ buffer: Buffer; originalname: string }>,
-  customerId: string,
-  type: ImageType
+  id: string,
+  type: ImageType,
+  resourceType: ResourceType = "customer"
 ): Promise<UploadResult[]> => {
-  if (type === "normal") {
-    const currentCount = await countCustomerImages(customerId);
-    if (currentCount + files.length > MAX_IMAGES) {
-      throw new Error(`Maximum number of images (${MAX_IMAGES}) would be exceeded`);
+  if (type === "normal" || type === "gallery") {
+    let currentCount = 0;
+    const maxImages = resourceType === "customer" ? MAX_CUSTOMER_IMAGES : MAX_POST_IMAGES;
+    
+    if (resourceType === "customer") {
+      currentCount = await countCustomerImages(id);
+    } else {
+      currentCount = await countPostImages(id);
+    }
+    
+    if (currentCount + files.length > maxImages) {
+      throw new Error(`Maximum number of images (${maxImages}) would be exceeded`);
     }
   }
 
   const uploadPromises = files.map((file) =>
-    uploadToS3(file.buffer, file.originalname, customerId, type)
+    uploadToS3(file.buffer, file.originalname, id, type, resourceType)
   );
 
   return Promise.all(uploadPromises);

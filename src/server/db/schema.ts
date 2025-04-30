@@ -39,3 +39,28 @@ export const customers = createTable(
     index("customer_updated_at_idx").on(t.updatedAt)
   ],
 );
+
+export const posts = createTable(
+  "post",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    subject: d.varchar({ length: 256 }).notNull(),
+    content: d.text().notNull(),
+    thumbnailUrl: d.text().notNull(),
+    // Define imageUrls as text[] to match PostgreSQL ARRAY type
+    imageUrls: d.text().array(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isActive: d.boolean().default(true).notNull(),
+  }),
+  (t) => [
+    index("post_subject_idx").on(t.subject),
+    index("post_created_at_idx").on(t.createdAt),
+    index("post_updated_at_idx").on(t.updatedAt)
+  ],
+);
