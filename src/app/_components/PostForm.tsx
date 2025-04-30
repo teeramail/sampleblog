@@ -5,6 +5,11 @@ import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+// Constants for file size limits
+const MAX_THUMBNAIL_SIZE = 30 * 1024; // 30KB
+const MAX_IMAGE_SIZE = 120 * 1024; // 120KB
+const MAX_GALLERY_IMAGES = 10; // Maximum 10 images per post
+
 // Default props type for the form
 type PostFormProps = {
   initialData?: {
@@ -37,6 +42,8 @@ export function PostForm({ initialData, isEditMode = false }: PostFormProps) {
   const [thumbnailPreview, setThumbnailPreview] = useState<string>(formData.thumbnailUrl);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>(formData.imageUrls);
   const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -114,75 +121,174 @@ export function PostForm({ initialData, isEditMode = false }: PostFormProps) {
   };
   
   // Handle thumbnail file selection
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (file) {
-        setThumbnailFile(file);
-        
-        // Create a preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setThumbnailPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+  const handleThumbnailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setThumbnailError(null);
+
+    // Validate file size
+    if (file.size > MAX_THUMBNAIL_SIZE) {
+      setThumbnailError(`Thumbnail must be less than ${MAX_THUMBNAIL_SIZE / 1024}KB`);
+      return;
+    }
+
+    try {
+      // Create a FormData object to upload the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'thumbnail');
+      // Use a default ID if postId is not available (for new posts)
+      const uploadPostId = initialData?.id ?? 'temp-' + Date.now();
+      formData.append('postId', uploadPostId);
+
+      // Set uploading state
+      setUploading(true);
+      
+      // Upload the file to the server
+      const response = await fetch('/api/post-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Don't show "Post ID is required" errors since we're providing a temp ID
+        if (errorData.message && errorData.message.includes("Post ID is required")) {
+          throw new Error("Upload failed. Please save post information first.");
+        }
+        throw new Error(errorData.message ? String(errorData.message) : "Failed to upload thumbnail");
       }
+
+      const data = await response.json();
+      const url = typeof data.url === 'string' ? data.url : '';
+      
+      // Set the thumbnail URL to the S3 URL returned by the server
+      setThumbnailPreview(url);
+      setFormData(prev => ({
+        ...prev,
+        thumbnailUrl: url
+      }));
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error);
+      const message = error instanceof Error ? error.message : "Unknown upload error";
+      setThumbnailError(message);
+      
+      // Clear the file input
+      if (thumbnailInputRef.current) {
+        thumbnailInputRef.current.value = '';
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  // Remove thumbnail
+  const removeThumbnail = () => {
+    setThumbnailPreview('');
+    setFormData(prev => ({
+      ...prev,
+      thumbnailUrl: ''
+    }));
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
     }
   };
   
   // Handle gallery files selection
-  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
-      setGalleryFiles(prevFiles => [...prevFiles, ...filesArray]);
-      
-      // Create previews
-      filesArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setGalleryPreviews(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setGalleryError(null);
+
+    // Check if adding these files would exceed the maximum
+    if (formData.imageUrls.length + files.length > MAX_GALLERY_IMAGES) {
+      setGalleryError(`You can only upload up to ${MAX_GALLERY_IMAGES} images (${formData.imageUrls.length} already uploaded)`);
+      return;
     }
-  };
-  
-  // Remove gallery preview
-  const removeGalleryPreview = (index: number) => {
-    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
-    setGalleryFiles(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  // Handle mock uploads for this implementation
-  // In a real app, you'd use the upload API to upload files to S3
-  const handleMockUpload = async () => {
+
+    // Validate each file size individually
+    const oversizedFiles = Array.from(files).filter(file => file.size > MAX_IMAGE_SIZE);
+    if (oversizedFiles.length > 0) {
+      setGalleryError(`Each image must be less than ${MAX_IMAGE_SIZE / 1024}KB. ${oversizedFiles.length} file(s) exceed this limit.`);
+      return;
+    }
+
+    // Set uploading state
     setUploading(true);
+
+    // Upload each file individually
+    const newImageUrls = [...formData.imageUrls];
+    const newGalleryPreviews = [...galleryPreviews];
     
     try {
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate mock URLs
-      let thumbnailUrl = formData.thumbnailUrl;
-      if (thumbnailFile) {
-        thumbnailUrl = `/mock-uploads/thumbnail-${Date.now()}.jpg`;
+      // Process files one by one
+      for (const file of Array.from(files)) {
+        try {
+          // Create a FormData object to upload the file
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', 'gallery');
+          // Use a default ID if postId is not available (for new posts)
+          const uploadPostId = initialData?.id ?? 'temp-' + Date.now();
+          formData.append('postId', uploadPostId);
+
+          // Upload the file to the server
+          const response = await fetch('/api/post-upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message ? String(errorData.message) : "Failed to upload image");
+          }
+
+          const data = await response.json();
+          const url = typeof data.url === 'string' ? data.url : '';
+          
+          // Add to our collected URLs and previews
+          newImageUrls.push(url);
+          newGalleryPreviews.push(url);
+        } catch (error) {
+          console.error('Error uploading gallery image:', error);
+          throw error;
+        }
       }
-      
-      let newImageUrls = [...formData.imageUrls];
-      if (galleryFiles.length > 0) {
-        const mockGalleryUrls = galleryFiles.map((_, index) => 
-          `/mock-uploads/gallery-${Date.now()}-${index}.jpg`
-        );
-        newImageUrls = [...newImageUrls, ...mockGalleryUrls];
-      }
-      
-      return {
-        thumbnailUrl,
+
+      // Update state with all successfully uploaded images
+      setFormData(prev => ({
+        ...prev,
         imageUrls: newImageUrls
-      };
+      }));
+      setGalleryPreviews(newGalleryPreviews);
+      
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      setGalleryError(error instanceof Error ? error.message : 'Failed to upload one or more images');
     } finally {
       setUploading(false);
+      // Clear the file input
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = '';
+      }
     }
+  };
+  
+  // Remove gallery image
+  const removeGalleryImage = (index: number) => {
+    const newImageUrls = [...formData.imageUrls];
+    newImageUrls.splice(index, 1);
+    
+    const newGalleryPreviews = [...galleryPreviews];
+    newGalleryPreviews.splice(index, 1);
+    
+    setFormData(prev => ({
+      ...prev,
+      imageUrls: newImageUrls
+    }));
+    setGalleryPreviews(newGalleryPreviews);
   };
   
   // Handle form submission
@@ -192,24 +298,14 @@ export function PostForm({ initialData, isEditMode = false }: PostFormProps) {
     setError("");
     
     try {
-      // First handle file uploads
-      const { thumbnailUrl, imageUrls } = await handleMockUpload();
-      
-      // Prepare submission data
-      const submissionData = {
-        ...formData,
-        thumbnailUrl,
-        imageUrls
-      };
-      
-      // Submit to API
+      // Files have already been uploaded at this point, so we just submit the form data
       if (isEditMode && initialData?.id) {
         await updateMutation.mutateAsync({
           id: initialData.id,
-          ...submissionData
+          ...formData
         });
       } else {
-        await createMutation.mutateAsync(submissionData);
+        await createMutation.mutateAsync(formData);
       }
       
       // Success - redirect handled in mutation callbacks
@@ -317,80 +413,101 @@ export function PostForm({ initialData, isEditMode = false }: PostFormProps) {
       
       <div>
         <label className="block text-sm font-medium text-gray-700">
-          Thumbnail Image
+          Thumbnail Image (max {MAX_THUMBNAIL_SIZE / 1024}KB)
         </label>
         <div className="mt-2">
-          <input
-            type="file"
-            ref={thumbnailInputRef}
-            onChange={handleThumbnailChange}
-            accept="image/*"
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => thumbnailInputRef.current?.click()}
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            {thumbnailPreview ? "Change Thumbnail" : "Upload Thumbnail"}
-          </button>
-          
-          {thumbnailPreview && (
-            <div className="mt-2">
+          {thumbnailPreview ? (
+            <div className="relative h-40 w-40">
               <Image
                 src={thumbnailPreview}
                 alt="Thumbnail preview"
-                width={100}
-                height={100}
-                className="h-24 w-24 rounded object-cover"
+                width={160}
+                height={160}
+                className="rounded-lg object-cover"
               />
+              <button
+                type="button"
+                onClick={removeThumbnail}
+                className="absolute right-2 top-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
             </div>
+          ) : (
+            <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleThumbnailChange}
+                ref={thumbnailInputRef}
+                className="hidden"
+                id="thumbnail-upload"
+              />
+              <label
+                htmlFor="thumbnail-upload"
+                className="cursor-pointer rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                Upload Thumbnail
+              </label>
+            </div>
+          )}
+          {thumbnailError && (
+            <p className="mt-1 text-sm text-red-600">{thumbnailError}</p>
           )}
         </div>
       </div>
       
       <div>
         <label className="block text-sm font-medium text-gray-700">
-          Gallery Images
+          Gallery Images (max {MAX_GALLERY_IMAGES} images, each max {MAX_IMAGE_SIZE / 1024}KB)
         </label>
         <div className="mt-2">
-          <input
-            type="file"
-            ref={galleryInputRef}
-            onChange={handleGalleryChange}
-            accept="image/*"
-            multiple
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => galleryInputRef.current?.click()}
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            Add Gallery Images
-          </button>
+          <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {galleryPreviews.map((url, index) => (
+              <div key={index} className="relative h-32">
+                <Image
+                  src={url}
+                  alt={`Gallery image ${index + 1}`}
+                  fill
+                  className="rounded-lg object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeGalleryImage(index)}
+                  className="absolute right-2 top-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
           
-          {galleryPreviews.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {galleryPreviews.map((preview, index) => (
-                <div key={index} className="relative">
-                  <Image
-                    src={preview}
-                    alt={`Gallery image ${index + 1}`}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 rounded object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeGalleryPreview(index)}
-                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+          {galleryPreviews.length < MAX_GALLERY_IMAGES && (
+            <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleGalleryChange}
+                ref={galleryInputRef}
+                className="hidden"
+                id="gallery-upload"
+              />
+              <label
+                htmlFor="gallery-upload"
+                className="cursor-pointer rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                Add Gallery Images
+              </label>
             </div>
+          )}
+          
+          {galleryError && (
+            <p className="mt-1 text-sm text-red-600">{galleryError}</p>
           )}
         </div>
       </div>
