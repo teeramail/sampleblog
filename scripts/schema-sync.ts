@@ -26,6 +26,7 @@ const ConfigSchema = z.object({
   databaseUrl: z.string(),
   schemaPath: z.string().default("../src/server/db/schema"),
   requireIndexes: z.boolean().default(true),
+  validateAllTables: z.boolean().default(true),
   tables: z.array(z.object({
     name: z.string(),
     columns: z.array(z.object({
@@ -65,6 +66,7 @@ const getConfig = (): SyncConfig => {
       databaseUrl: process.env.DATABASE_URL,
       schemaPath: "../src/server/db/schema",
       requireIndexes: true,
+      validateAllTables: true,
       tables: [] // Will be filled by introspection
     };
   }
@@ -87,6 +89,34 @@ const formatValidationMessage = (message: string, isError = false) => {
     : `✅ ${message}`;
 };
 
+// Determine if a column is a primary key
+async function getPrimaryKeyColumns(conn: any, tableName: string): Promise<string[]> {
+  const primaryKeyQuery = `
+    SELECT a.attname
+    FROM pg_index i
+    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+    WHERE i.indrelid = '${tableName}'::regclass
+    AND i.indisprimary;
+  `;
+  
+  const primaryKeyResults = await conn.unsafe(primaryKeyQuery);
+  return primaryKeyResults.map((row: any) => row.attname);
+}
+
+// Determine if a column is unique
+async function getUniqueColumns(conn: any, tableName: string): Promise<string[]> {
+  const uniqueQuery = `
+    SELECT a.attname
+    FROM pg_index i
+    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+    WHERE i.indrelid = '${tableName}'::regclass
+    AND i.indisunique AND NOT i.indisprimary;
+  `;
+  
+  const uniqueResults = await conn.unsafe(uniqueQuery);
+  return uniqueResults.map((row: any) => row.attname);
+}
+
 async function introspectDatabase(databaseUrl: string): Promise<SyncConfig['tables']> {
   console.log("Introspecting database schema...");
   
@@ -102,7 +132,8 @@ async function introspectDatabase(databaseUrl: string): Promise<SyncConfig['tabl
     
     // Get all tables and columns
     const columns = await conn.unsafe(`
-      SELECT table_name, column_name, data_type, is_nullable
+      SELECT table_name, column_name, data_type, is_nullable, 
+             column_default, character_maximum_length, numeric_precision, numeric_scale
       FROM information_schema.columns
       WHERE table_schema = 'public'
       ORDER BY table_name, ordinal_position
@@ -117,7 +148,11 @@ async function introspectDatabase(databaseUrl: string): Promise<SyncConfig['tabl
       tableColumnsMap.get(column.table_name).push({
         name: column.column_name,
         type: column.data_type,
-        nullable: column.is_nullable === 'YES'
+        nullable: column.is_nullable === 'YES',
+        default: column.column_default,
+        maxLength: column.character_maximum_length,
+        precision: column.numeric_precision,
+        scale: column.numeric_scale
       });
     });
     
@@ -136,16 +171,33 @@ async function introspectDatabase(databaseUrl: string): Promise<SyncConfig['tabl
         tableIndexesMap.set(index.tablename, []);
       }
       tableIndexesMap.get(index.tablename).push({
-        name: index.indexname
+        name: index.indexname,
+        definition: index.indexdef
       });
     });
     
     // Build the tables array for the config
     const tables: SyncConfig['tables'] = [];
     for (const [tableName, columns] of tableColumnsMap.entries()) {
+      // Get primary keys and unique columns
+      const primaryKeys = await getPrimaryKeyColumns(conn, tableName);
+      const uniqueColumns = await getUniqueColumns(conn, tableName);
+      
+      // Enhanced column information
+      const enhancedColumns = columns.map((col: any) => {
+        return {
+          name: col.name,
+          type: col.type,
+          nullable: col.nullable,
+          isPrimaryKey: primaryKeys.includes(col.name),
+          isUnique: uniqueColumns.includes(col.name),
+          default: col.default
+        };
+      });
+      
       tables.push({
         name: tableName,
-        columns: columns,
+        columns: enhancedColumns,
         indexes: tableIndexesMap.get(tableName) || []
       });
     }
@@ -169,6 +221,7 @@ async function generateConfigFile(databaseUrl: string) {
     databaseUrl: databaseUrl,
     schemaPath: "../src/server/db/schema",
     requireIndexes: true,
+    validateAllTables: true,
     tables: tables
   };
   
@@ -179,8 +232,29 @@ async function generateConfigFile(databaseUrl: string) {
   return config;
 }
 
+// Extract schema tables from Drizzle schema
+function extractSchemaTablesFromDrizzle(schema: any): Set<string> {
+  const schemaTableNames = new Set<string>();
+  
+  // Look for exported objects that might be tables
+  for (const exportName in schema) {
+    if (schema[exportName] && typeof schema[exportName] === 'object') {
+      // Check for properties that would indicate a Drizzle table
+      if (
+        schema[exportName].name && 
+        typeof schema[exportName].name === 'string' &&
+        (schema[exportName].$type === 'table' || schema[exportName]._.columns)
+      ) {
+        schemaTableNames.add(schema[exportName].name);
+      }
+    }
+  }
+  
+  return schemaTableNames;
+}
+
 async function validateSchema(config: SyncConfig) {
-  const { databaseUrl, schemaPath, tables, requireIndexes } = config;
+  const { databaseUrl, schemaPath, tables, requireIndexes, validateAllTables } = config;
   
   console.log(`\nValidating schema for ${databaseUrl.replace(/\/\/([^:]+):[^@]+@/, "//***:***@")}`);
   
@@ -203,6 +277,10 @@ async function validateSchema(config: SyncConfig) {
     const conn = postgres(databaseUrl, connectionConfig);
     const schema = await getSchema(schemaPath);
     const db = drizzle(conn, { schema });
+    
+    // Extract table names from Drizzle schema
+    const schemaTableNames = extractSchemaTablesFromDrizzle(schema);
+    console.log(`Found ${schemaTableNames.size} tables in Drizzle schema: ${[...schemaTableNames].join(', ')}`);
     
     // Check if tables exist in the database
     console.log("Checking database schema...");
@@ -227,9 +305,28 @@ async function validateSchema(config: SyncConfig) {
     });
     
     // Output all tables found
-    console.log(`Found ${tableColumnsMap.size} tables: ${[...tableColumnsMap.keys()].join(', ')}`);
+    console.log(`Found ${tableColumnsMap.size} tables in database: ${[...tableColumnsMap.keys()].join(', ')}`);
     
     let allValid = true;
+    
+    // Compare Drizzle schema tables with database tables
+    if (validateAllTables) {
+      // Check if all tables in Drizzle schema exist in database
+      for (const tableName of schemaTableNames) {
+        if (!tableColumnsMap.has(tableName)) {
+          console.log(formatValidationMessage(`Table ${tableName} defined in schema but missing in database`, true));
+          allValid = false;
+        }
+      }
+      
+      // Check if all tables in database exist in Drizzle schema
+      for (const tableName of tableColumnsMap.keys()) {
+        if (!schemaTableNames.has(tableName)) {
+          console.log(formatValidationMessage(`Table ${tableName} exists in database but missing in schema`, true));
+          allValid = false;
+        }
+      }
+    }
     
     // Validate each table in our configuration
     for (const table of tables) {
@@ -243,7 +340,7 @@ async function validateSchema(config: SyncConfig) {
         for (const col of table.columns) {
           const dbColumn = dbColumns.find((c: any) => c.name === col.name);
           if (!dbColumn) {
-            console.log(formatValidationMessage(`Missing column: ${col.name}`, true));
+            console.log(formatValidationMessage(`Missing column: ${col.name} in table ${table.name}`, true));
             columnsValid = false;
           } else {
             // For array type, just check if it contains "ARRAY"
@@ -254,16 +351,25 @@ async function validateSchema(config: SyncConfig) {
             const nullableMatches = col.nullable === undefined || dbColumn.nullable === col.nullable;
             
             if (typeMatches && nullableMatches) {
-              console.log(formatValidationMessage(`Column ${col.name} has correct type and nullability`));
+              console.log(formatValidationMessage(`Column ${table.name}.${col.name} has correct type and nullability`));
             } else {
               columnsValid = false;
               if (!typeMatches) {
-                console.log(formatValidationMessage(`Column ${col.name} has incorrect type: expected ${col.type}, got ${dbColumn.type}`, true));
+                console.log(formatValidationMessage(`Column ${table.name}.${col.name} has incorrect type: expected ${col.type}, got ${dbColumn.type}`, true));
               }
               if (!nullableMatches) {
-                console.log(formatValidationMessage(`Column ${col.name} has incorrect nullability: expected ${col.nullable}, got ${dbColumn.nullable}`, true));
+                console.log(formatValidationMessage(`Column ${table.name}.${col.name} has incorrect nullability: expected ${col.nullable}, got ${dbColumn.nullable}`, true));
               }
             }
+          }
+        }
+        
+        // Check for database columns missing from config
+        for (const dbColumn of dbColumns) {
+          const configColumn = table.columns.find(c => c.name === dbColumn.name);
+          if (!configColumn) {
+            console.log(formatValidationMessage(`Extra column in database: ${table.name}.${dbColumn.name} (${dbColumn.type}, nullable: ${dbColumn.nullable})`, true));
+            columnsValid = false;
           }
         }
         
@@ -279,9 +385,9 @@ async function validateSchema(config: SyncConfig) {
           for (const idx of table.indexes) {
             const dbIndex = indexes.find((i: any) => i.indexname === idx.name);
             if (dbIndex) {
-              console.log(formatValidationMessage(`Index ${idx.name} exists`));
+              console.log(formatValidationMessage(`Index ${table.name}.${idx.name} exists`));
             } else {
-              console.log(formatValidationMessage(`Missing index: ${idx.name}`, true));
+              console.log(formatValidationMessage(`Missing index: ${table.name}.${idx.name}`, true));
               indexesValid = false;
             }
           }
@@ -292,7 +398,7 @@ async function validateSchema(config: SyncConfig) {
         if (!isValid) allValid = false;
         
       } else {
-        console.log(formatValidationMessage(`Table ${table.name} not found`, true));
+        console.log(formatValidationMessage(`Table ${table.name} not found in database`, true));
         allValid = false;
       }
     }

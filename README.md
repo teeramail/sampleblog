@@ -30,11 +30,15 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 
 # Database Schema Validation
 
-This project includes tools for ensuring schema compatibility between your Drizzle ORM definitions and your actual database.
+This project includes a powerful, adaptable schema validation tool that ensures compatibility between your Drizzle ORM definitions and your actual database.
+
+## Single Database Configuration
+
+This project is configured to use a single database. The database URL is set in the `.env` file, and all database operations are performed against this database. This simplifies configuration and ensures consistency.
 
 ## Schema Sync Tool
 
-The schema sync tool is a flexible, project-agnostic solution for validating that your database schema matches your expectations:
+The schema sync tool is designed to work with any project and any PostgreSQL database name:
 
 ```bash
 # Generate a configuration file by inspecting your database
@@ -43,18 +47,21 @@ npm run db:schema:generate
 # Validate your database against the configuration
 npm run db:schema:sync
 
-# Validate a specific database (can be used in any project)
-npm run db:schema:sync -- "postgresql://user:password@host:port/database"
+# Validate a specific database (useful for projects that adapt this codebase)
+npm run db:schema:sync -- "postgresql://user:password@host:port/your_database_name"
 ```
 
 ### How It Works
 
-1. **Configuration-based:** The tool generates a `schema-sync-config.json` file in your project root with table structure information
-2. **Database-agnostic:** Works with any PostgreSQL database, regardless of naming
-3. **Portable:** Can be used across different projects with different database names
-4. **Customizable:** You can manually edit the config file to adjust validation rules
+1. **Table Detection:** The tool automatically detects all tables in both your Drizzle schema and your database
+2. **Complete Validation:** Checks all tables, columns, types, nullability, and indexes
+3. **Database-agnostic:** Works with any PostgreSQL database, regardless of naming
+4. **Portable:** Can be easily copied to other projects with different database structures
+5. **Configuration-based:** Uses a JSON config file that can be version-controlled and customized
 
 ### Example Configuration
+
+The `schema-sync-config.json` file is automatically generated based on your database structure:
 
 ```json
 {
@@ -62,11 +69,12 @@ npm run db:schema:sync -- "postgresql://user:password@host:port/database"
   "databaseUrl": "postgresql://user:password@host:port/database",
   "schemaPath": "../src/server/db/schema",
   "requireIndexes": true,
+  "validateAllTables": true,
   "tables": [
     {
       "name": "customer",
       "columns": [
-        { "name": "id", "type": "uuid" },
+        { "name": "id", "type": "uuid", "isPrimaryKey": true },
         { "name": "name", "type": "character varying" },
         { "name": "email", "type": "character varying" }
       ],
@@ -78,34 +86,31 @@ npm run db:schema:sync -- "postgresql://user:password@host:port/database"
 }
 ```
 
-## Legacy Schema Validation
+## Adapting to New Projects
 
-The project also maintains the original schema validation tools:
+This project serves as a model for other projects:
 
-```bash
-# Validate against all three databases
-npm run db:validate
+1. When starting a new project, copy the schema validation tools
+2. Update the DATABASE_URL in your .env file to point to your new database
+3. Run `npm run db:schema:generate` to create a configuration for your database
+4. Use `npm run db:schema:sync` to validate your schema
 
-# Check specific databases
-npm run db:check:keepdoc
-npm run db:check:customer
-npm run db:check:realsamui
-```
-
-## When to Use Each Tool
-
-- **Schema Sync:** For new projects or when adapting this codebase to projects with different database configurations
-- **Legacy Validation:** For this specific project with its three-database structure
+The tool will automatically adapt to different:
+- Database names
+- Table structures
+- Column types
+- Index configurations
 
 ## Migration Commands
 
 After validating the schema, you can apply necessary changes:
 
 ```bash
-# Migrate specific databases
-npm run db:migrate:keepdoc
-npm run db:migrate:customer
-npm run db:migrate:realsamui
+# Check for differences between schema and database
+npm run db:generate
+
+# Apply changes to the database
+npm run db:migrate
 ```
 
-With these tools, you can ensure that your database schema always matches your code expectations, regardless of which project or database you're working with.
+See [SETUP.md](scripts/SETUP.md) for detailed instructions on adapting this codebase to new projects.

@@ -1,0 +1,143 @@
+{
+  "projectName": "Default Project",
+  "databaseUrl": "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/keepdoc?sslmode=require",
+  "schemaPath": "../src/server/db/schema",
+  "requireIndexes": true,
+  "validateAllTables": true,
+  "tables": [
+    {
+      "name": "customer",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "isPrimaryKey": true,
+          "isUnique": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "email",
+          "type": "character varying",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "phone",
+          "type": "character varying",
+          "nullable": true,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "thumbnailUrl",
+          "type": "text",
+          "nullable": true,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "imageUrls",
+          "type": "ARRAY",
+          "nullable": true,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "customer_email_idx",
+          "definition": "CREATE INDEX customer_email_idx ON public.customer USING btree (email)"
+        },
+        {
+          "name": "customer_name_idx",
+          "definition": "CREATE INDEX customer_name_idx ON public.customer USING btree (name)"
+        },
+        {
+          "name": "customer_pkey",
+          "definition": "CREATE UNIQUE INDEX customer_pkey ON public.customer USING btree (id)"
+        },
+        {
+          "name": "customer_updated_at_idx",
+          "definition": "CREATE INDEX customer_updated_at_idx ON public.customer USING btree (\"updatedAt\")"
+        }
+      ]
+    },
+    {
+      "name": "post",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "isPrimaryKey": true,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "nullable": true,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "isPrimaryKey": false,
+          "isUnique": false,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "name_idx",
+          "definition": "CREATE INDEX name_idx ON public.post USING btree (name)"
+        },
+        {
+          "name": "post_pkey",
+          "definition": "CREATE UNIQUE INDEX post_pkey ON public.post USING btree (id)"
+        }
+      ]
+    }
+  ]
+}
