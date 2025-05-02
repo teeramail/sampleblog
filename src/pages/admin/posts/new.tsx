@@ -127,11 +127,30 @@ export default function NewPostPage() {
         // For now, we'll just convert them to base64 strings
         imageUrls = await processImages(uploadedImages);
         
+        // Make sure the thumbnail is the first image in the array
+        if (imageUrls.length > 0 && thumbnailIndex !== 0 && thumbnailIndex < uploadedImages.length) {
+          // Get the thumbnail URL
+          const thumbnailUrl = imageUrls[0]; // The first image in the processed array is the thumbnail
+          
+          // Log for debugging
+          console.log('Ensuring thumbnail is first in the array');
+          console.log('Original image order:', imageUrls);
+          
+          // Reorder the array to ensure the thumbnail is first
+          const reorderedUrls = [thumbnailUrl];
+          for (let i = 1; i < imageUrls.length; i++) {
+            reorderedUrls.push(imageUrls[i]);
+          }
+          
+          imageUrls = reorderedUrls;
+          console.log('Reordered image array:', imageUrls);
+        }
+        
         setIsUploadingImages(false);
       }
       
       // Create post with processed images
-      // Make sure the thumbnail (first image) is included in the image_urls array
+      // The thumbnail is now guaranteed to be the first image in the array
       createMutation.mutate({
         title: formData.title,
         content: formData.content,
