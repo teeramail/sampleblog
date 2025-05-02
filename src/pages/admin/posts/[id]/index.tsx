@@ -16,6 +16,12 @@ export default function ViewPostPage() {
     { enabled: !!id }
   );
   
+  // Fetch content sections
+  const { data: contentSections = [] } = api.post.getContentSections.useQuery(
+    { postId: id as string },
+    { enabled: !!id }
+  );
+  
   const formatDate = (date: Date | null) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString("en-US", {
@@ -122,40 +128,71 @@ export default function ViewPostPage() {
             </div>
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">
-                Content
+                Content Sections
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 whitespace-pre-wrap">
-                {post.content}
-              </dd>
-            </div>
-            {post.image_urls && post.image_urls.length > 0 && (
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">
-                  Images
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {post.image_urls.map((url, index) => (
-                      <div key={index} className="relative border rounded-md overflow-hidden h-40">
-                        <Image
-                          src={url}
-                          alt={`Image ${index + 1}`}
-                          width={150}
-                          height={150}
-                          className="object-cover w-full h-full"
-                          unoptimized
-                        />
-                        {index === 0 && (
-                          <div className="absolute top-0 left-0 bg-blue-500 text-white px-2 py-1 text-xs">
-                            Thumbnail
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {contentSections && contentSections.length > 0 ? (
+                  <div className="space-y-6">
+                    {contentSections.map((section, sectionIndex) => (
+                      <div key={section.id} className="border-b pb-4 mb-4 last:border-b-0">
+                        <div className="whitespace-pre-wrap mb-3">{section.content}</div>
+                        
+                        {section.imageUrls && section.imageUrls.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                            {section.imageUrls.map((url, imgIndex) => (
+                              <div key={`${section.id}-img-${imgIndex}`} className="relative border rounded-md overflow-hidden h-40">
+                                <Image
+                                  src={url}
+                                  alt={`Section ${sectionIndex + 1} Image ${imgIndex + 1}`}
+                                  width={150}
+                                  height={150}
+                                  className="object-cover w-full h-full"
+                                  unoptimized
+                                />
+                              </div>
+                            ))}
                           </div>
                         )}
+                        
+                        <div className="text-xs text-gray-500 mt-2">
+                          Added on {formatDate(section.createdAt)}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </dd>
-              </div>
-            )}
+                ) : (
+                  <div>
+                    <p className="whitespace-pre-wrap mb-4">{post.content}</p>
+                    
+                    {post.image_urls && post.image_urls.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        {post.image_urls.map((url, index) => (
+                          <div key={index} className="relative border rounded-md overflow-hidden h-40">
+                            <Image
+                              src={url}
+                              alt={`Image ${index + 1}`}
+                              width={150}
+                              height={150}
+                              className="object-cover w-full h-full"
+                              unoptimized
+                            />
+                            {index === 0 && (
+                              <div className="absolute top-0 left-0 bg-blue-500 text-white px-2 py-1 text-xs">
+                                Thumbnail
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-gray-500 mt-4">
+                      <span className="bg-yellow-100 px-2 py-1 rounded">Legacy format</span> - This post uses the old content format without sections
+                    </div>
+                  </div>
+                )}
+              </dd>
+            </div>
           </dl>
         </div>
       </div>
