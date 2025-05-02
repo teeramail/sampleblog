@@ -11,7 +11,12 @@ import type { Answer } from '../../../server/db/types';
 export default function PostDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const postId = params.id as string;
+  const postId = params?.id as string;
+
+  if (!postId) {
+    return notFound();
+  }
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
