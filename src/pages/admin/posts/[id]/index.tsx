@@ -135,6 +135,20 @@ export default function ViewPostPage() {
                   <div className="space-y-6">
                     {contentSections.map((section, sectionIndex) => (
                       <div key={section.id} className="border-b pb-4 mb-4 last:border-b-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="text-xs text-gray-500">
+                            Added on {formatDate(section.createdAt)}
+                          </div>
+                          <div className="flex space-x-2">
+                            <Link 
+                              href={`/admin/posts/${post.id}/section/${section.id}/edit`}
+                              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded"
+                            >
+                              Edit Section
+                            </Link>
+                          </div>
+                        </div>
+                        
                         <div className="whitespace-pre-wrap mb-3">{section.content}</div>
                         
                         {section.imageUrls && section.imageUrls.length > 0 && (
@@ -153,10 +167,6 @@ export default function ViewPostPage() {
                             ))}
                           </div>
                         )}
-                        
-                        <div className="text-xs text-gray-500 mt-2">
-                          Added on {formatDate(section.createdAt)}
-                        </div>
                       </div>
                     ))}
                   </div>

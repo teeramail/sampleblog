@@ -39,6 +39,16 @@ export default function EditPostPage() {
     }
   );
   
+  // Fetch content sections
+  const { data: contentSections = [], isLoading: isLoadingSections } = api.post.getContentSections.useQuery(
+    { postId: id as string },
+    { 
+      enabled: !!id,
+      retry: 2,
+      retryDelay: 1000
+    }
+  );
+  
   // Handle successful data loading
   useEffect(() => {
     if (post && !isLoadingPost) {
@@ -144,57 +154,47 @@ export default function EditPostPage() {
   const processImages = async (files: File[]): Promise<string[]> => {
     if (!files.length) return [];
     
+    setIsUploadingImages(true);
+    
     try {
-      // In a real app, you might resize/compress images here
-      // For now, we'll just convert them to base64
       const base64Images = await convertImagesToBase64(files);
+      setIsUploadingImages(false);
       return base64Images;
     } catch (error) {
-      console.error("Error processing images:", error);
+      setIsUploadingImages(false);
+      setError("Failed to process images. Please try again.");
       throw error;
     }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting || isUploadingImages) return;
+    
     setIsSubmitting(true);
     setError(null);
     
     try {
-      // Process images if there are any
-      let imageUrls: string[] = [];
-      
+      // Process uploaded images if any
+      let processedImages: string[] = [];
       if (uploadedImages.length > 0) {
-        setIsUploadingImages(true);
-        
-        try {
-          // Process images (resize, optimize)
-          const processedImages = await processImages(uploadedImages);
-          
-          // Convert to base64 for API submission
-          imageUrls = processedImages;
-          
-          setIsUploadingImages(false);
-        } catch (err) {
-          console.error("Error processing images:", err);
-          setError("Failed to process images. Please try again with smaller images.");
-          setIsSubmitting(false);
-          setIsUploadingImages(false);
-          return;
-        }
+        processedImages = await processImages(uploadedImages);
       }
       
-      // Update the post
-      await updateMutation.mutateAsync({
+      // Prepare update data
+      const updateData = {
         id: id as string,
         ...formData,
-        image_urls: imageUrls.length > 0 ? imageUrls : existingImageUrls,
-        // Note: If thumbnail_index is not part of the API, we need to remove it
-        // or ensure it's added to the API type definition
-      });
+        // If we have new images, use them, otherwise keep existing ones
+        image_urls: processedImages.length > 0 ? processedImages : existingImageUrls,
+      };
       
-    } catch (err) {
-      console.error("Error updating post:", err);
+      // Submit update
+      await updateMutation.mutateAsync(updateData);
+      
+    } catch (error) {
+      console.error("Error updating post:", error);
       setError("Failed to update post. Please try again.");
       setIsSubmitting(false);
     }
@@ -204,62 +204,106 @@ export default function EditPostPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Loading Post...</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            If this takes too long, the post might not exist or there could be a database connection issue.
-          </p>
-          <button 
-            onClick={() => router.reload()} 
-            className="mt-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-          >
-            Retry
-          </button>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-xl">Loading post data...</div>
         </div>
       </div>
     );
   }
-
-  // Show error state if there was an error
-  if (error) {
+  
+  // Show error if post couldn't be loaded
+  if (error || !post) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Edit Post</h1>
-          <Link href="/admin/posts" className="text-blue-500 hover:underline">
+          <Link 
+            href="/admin/posts"
+            className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+          >
             Back to Posts
           </Link>
         </div>
-        <div className="rounded-md bg-red-50 p-8 text-center">
-          <p className="text-red-500">{error}</p>
-          <div className="mt-4 flex justify-center space-x-4">
-            <button 
-              onClick={() => router.reload()} 
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            >
-              Retry
-            </button>
-            <Link 
-              href="/admin/posts" 
-              className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
-            >
-              Back to Posts
-            </Link>
-          </div>
+        
+        <div className="rounded-md bg-red-50 p-4 text-red-500">
+          {error || "Post not found"}
         </div>
       </div>
     );
   }
+  
+  // Format date for display
+  const formatDate = (date: Date | null) => {
+    if (!date) return "N/A";
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
 
   // Main return for the component
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Edit Post</h1>
-        <Link href="/admin/posts" className="text-blue-500 hover:underline">
-          Back to Posts
-        </Link>
-      </div>     
+        <div className="flex space-x-2">
+          <Link 
+            href={`/admin/posts/${post.id}/add`}
+            className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+          >
+            Add Content
+          </Link>
+          <Link 
+            href="/admin/posts"
+            className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+          >
+            Back to Posts
+          </Link>
+        </div>
+      </div>
+      
+      {/* Content Sections Preview */}
+      {contentSections && contentSections.length > 0 && (
+        <div className="mb-8 bg-gray-50 p-4 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Content Sections</h2>
+          <div className="space-y-6">
+            {contentSections.map((section, index) => (
+              <div key={section.id || index} className="border-b pb-4 mb-4 last:border-b-0">
+                <div className="whitespace-pre-wrap mb-3">{section.content}</div>
+                
+                {section.imageUrls && section.imageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                    {section.imageUrls.map((url, imgIndex) => (
+                      <div key={`${section.id}-img-${imgIndex}`} className="relative border rounded-md overflow-hidden h-40">
+                        <Image
+                          src={url}
+                          alt={`Section ${index + 1} Image ${imgIndex + 1}`}
+                          width={150}
+                          height={150}
+                          className="object-cover w-full h-full"
+                          unoptimized
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="text-xs text-gray-500 mt-2">
+                  Added on {formatDate(section.createdAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>These content sections are displayed in chronological order on the post page.</p>
+            <p>To add more content, use the "Add Content" button after saving your changes.</p>
+          </div>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">

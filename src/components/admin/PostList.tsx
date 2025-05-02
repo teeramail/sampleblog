@@ -265,16 +265,10 @@ export function PostList() {
                       View
                     </Link>
                     <Link
-                      href={`/admin/posts/${post.id}/edit`}
-                      className="mr-2 text-green-600 hover:text-green-900"
-                    >
-                      Edit
-                    </Link>
-                    <Link
                       href={`/admin/posts/${post.id}/add`}
                       className="mr-2 text-indigo-600 hover:text-indigo-900"
                     >
-                      Add
+                      Add Content
                     </Link>
                     <button
                       className="text-red-600 hover:text-red-900 disabled:opacity-50"

@@ -487,8 +487,6 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
-  // New procedure: Append content to an existing post
-  // Removed duplicate appendContent procedure
     
   // Add a new procedure to get content sections with their images
   getContentSections: publicProcedure
@@ -518,6 +516,129 @@ export const postRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to get content sections",
+          cause: error,
+        });
+      }
+    }),
+    
+  // Get a single content section by ID
+  getContentSectionById: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        // Get the content section with its images
+        const section = await ctx.db.query.contentSections.findFirst({
+          where: eq(contentSections.id, input.id),
+          with: {
+            images: {
+              orderBy: asc(sectionImages.order_index),
+            },
+          },
+        });
+
+        if (!section) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Content section not found",
+          });
+        }
+
+        // Transform the data for the frontend
+        return {
+          id: section.id,
+          content: section.content,
+          createdAt: section.created_at,
+          imageUrls: section.images.map(img => img.image_url),
+        };
+      } catch (error) {
+        console.error("Error getting content section:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get content section",
+          cause: error,
+        });
+      }
+    }),
+    
+  // Update an existing content section
+  updateContentSection: publicProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      content: z.string().min(1, "Content is required"),
+      imageUrls: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Begin a transaction
+        return await ctx.db.transaction(async (tx) => {
+          // 1. Update the content section
+          await tx
+            .update(contentSections)
+            .set({
+              content: input.content,
+            })
+            .where(eq(contentSections.id, input.id));
+
+          // 2. If new images are provided, replace the existing ones
+          if (input.imageUrls && input.imageUrls.length > 0) {
+            // First, delete existing images
+            await tx
+              .delete(sectionImages)
+              .where(eq(sectionImages.section_id, input.id));
+
+            // Then insert new images
+            const imageValues = input.imageUrls.map((url, index) => ({
+              section_id: input.id,
+              image_url: url,
+              order_index: index,
+            }));
+
+            await tx.insert(sectionImages).values(imageValues);
+
+            // 3. Get the post ID for this section
+            const section = await tx.query.contentSections.findFirst({
+              where: eq(contentSections.id, input.id),
+            });
+
+            if (section) {
+              // 4. Update the post's image_urls array for backward compatibility
+              const post = await tx.query.posts.findFirst({
+                where: eq(posts.id, section.post_id),
+              });
+
+              if (post) {
+                // Get all content sections for this post
+                const allSections = await tx.query.contentSections.findMany({
+                  where: eq(contentSections.post_id, section.post_id),
+                  with: {
+                    images: true,
+                  },
+                });
+
+                // Collect all image URLs from all sections
+                const allImageUrls = allSections.flatMap(s => 
+                  s.images.map(img => img.image_url)
+                );
+
+                // Update the post with all image URLs
+                await tx
+                  .update(posts)
+                  .set({
+                    image_urls: allImageUrls,
+                    updated_at: new Date(),
+                  })
+                  .where(eq(posts.id, section.post_id));
+              }
+            }
+          }
+
+          return { success: true };
+        });
+      } catch (error) {
+        console.error("Error updating content section:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update content section",
           cause: error,
         });
       }
@@ -556,11 +677,12 @@ export const postRouter = createTRPCRouter({
           }
           
           const newSection = insertResult[0];
+          const sectionId = newSection.id;
 
           // 3. Insert images for this section if any
           if (input.imageUrls && input.imageUrls.length > 0) {
             const imageValues = input.imageUrls.map((url, index) => ({
-              section_id: newSection.id,
+              section_id: sectionId,
               image_url: url,
               order_index: index,
             }));
@@ -586,7 +708,7 @@ export const postRouter = createTRPCRouter({
 
           return { 
             success: true, 
-            sectionId: newSection.id 
+            sectionId: sectionId 
           };
         });
       } catch (error) {
