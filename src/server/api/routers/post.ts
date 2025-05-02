@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { eq, like, or, desc, lt } from "drizzle-orm";
-import { posts } from "~/server/db/schema";
+import { eq, like, or, desc, lt, and, asc } from "drizzle-orm";
+import { posts, contentSections, sectionImages } from "~/server/db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromS3 } from "~/server/lib/s3";
 import { 
@@ -35,8 +35,24 @@ const appendContentSchema = z.object({
   newImageUrls: z.array(z.string()).optional(),
 });
 
-// Function to format appended content with timestamp
-const formatAppendedContent = (originalContent: string, newContent: string): string => {
+// Schema for content sections
+const contentSectionSchema = z.object({
+  postId: z.string().uuid(),
+  content: z.string().min(1, "Content is required"),
+  imageUrls: z.array(z.string()).optional(),
+});
+
+// Schema for getting content sections
+const getContentSectionsSchema = z.object({
+  postId: z.string().uuid(),
+});
+
+// Special marker to identify content sections with associated images
+const CONTENT_SECTION_MARKER = '<!-- CONTENT_SECTION -->';
+const IMAGE_SECTION_MARKER = '<!-- IMAGE_SECTION -->';
+
+// Function to format appended content with timestamp and image markers
+const formatAppendedContent = (originalContent: string, newContent: string, newImageUrls?: string[]): string => {
   const timestamp = new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'long', 
@@ -44,7 +60,20 @@ const formatAppendedContent = (originalContent: string, newContent: string): str
     hour: '2-digit',
     minute: '2-digit'
   });
-  return `${originalContent}\n\n--- Added on ${timestamp} ---\n\n${newContent}`;
+  
+  // Create a new content section with markers for images
+  let formattedNewContent = `${CONTENT_SECTION_MARKER}\n${newContent}`;
+  
+  // Add image section marker and JSON-encoded image URLs if there are any
+  if (newImageUrls && newImageUrls.length > 0) {
+    formattedNewContent += `\n\n${IMAGE_SECTION_MARKER}\n${JSON.stringify(newImageUrls)}`;
+  }
+  
+  // Add timestamp separator
+  formattedNewContent += `\n\n--- Added on ${timestamp} ---\n\n`;
+  
+  // Prepend new content to original content (chronological order - newest first)
+  return formattedNewContent + originalContent;
 };
 
 export const postRouter = createTRPCRouter({
@@ -363,9 +392,20 @@ export const postRouter = createTRPCRouter({
           });
         }
         
-        // Format the appended content with a timestamp
+        // Process new images if provided
+        let processedNewImageUrls: string[] = [];
+        if (newImageUrls && newImageUrls.length > 0) {
+          // Ensure we're working with arrays
+          processedNewImageUrls = Array.isArray(newImageUrls) ? newImageUrls : [newImageUrls];
+          
+          console.log('Processing new images for content:', {
+            newImages: processedNewImageUrls.length
+          });
+        }
+        
+        // Format the appended content with a timestamp and include image references
         const originalContent = existingPost.content;
-        const formattedContent = formatAppendedContent(originalContent, newContent);
+        const formattedContent = formatAppendedContent(originalContent, newContent, processedNewImageUrls);
         
         // Prepare update data
         const updateData: Record<string, any> = {
@@ -373,11 +413,20 @@ export const postRouter = createTRPCRouter({
           updated_at: new Date()
         };
         
-        // Add new images if provided
-        if (newImageUrls && newImageUrls.length > 0) {
+        // Store all images in the post's image_urls array for backward compatibility
+        if (processedNewImageUrls.length > 0) {
           // Combine existing images with new ones
           const existingImages = existingPost.image_urls || [];
-          updateData.image_urls = [...existingImages, ...newImageUrls];
+          const existingImagesArray = Array.isArray(existingImages) ? existingImages : [];
+          
+          // Combine and set the image URLs
+          updateData.image_urls = [...existingImagesArray, ...processedNewImageUrls];
+          
+          console.log('Adding images to post image_urls array:', {
+            existingImages: existingImagesArray.length,
+            newImages: processedNewImageUrls.length,
+            combined: updateData.image_urls.length
+          });
         }
         
         // Update the post
@@ -438,23 +487,115 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
-  // Get unique titles for dropdown selection
-  getSubjects: publicProcedure
-    .query(async ({ ctx }) => {
+  // New procedure: Append content to an existing post
+  // Removed duplicate appendContent procedure
+    
+  // Add a new procedure to get content sections with their images
+  getContentSections: publicProcedure
+    .input(getContentSectionsSchema)
+    .query(async ({ ctx, input }) => {
       try {
-        // Get distinct titles from posts
-        const result = await ctx.db.selectDistinct({ title: posts.title })
-          .from(posts)
-          .orderBy(posts.title);
-        
-        return result.map(item => item.title);
+        // Get all content sections for this post ordered by order_index (oldest first)
+        const sections = await ctx.db.query.contentSections.findMany({
+          where: eq(contentSections.post_id, input.postId),
+          orderBy: asc(contentSections.order_index),
+          with: {
+            images: {
+              orderBy: asc(sectionImages.order_index),
+            },
+          },
+        });
+
+        // Transform the data for the frontend
+        return sections.map(section => ({
+          id: section.id,
+          content: section.content,
+          createdAt: section.created_at,
+          imageUrls: section.images.map(img => img.image_url),
+        }));
       } catch (error) {
-        console.error("Error in post.getSubjects:", error);
+        console.error("Error getting content sections:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch post titles",
+          message: "Failed to get content sections",
           cause: error,
         });
       }
     }),
-}); 
+    
+  // Add a new procedure to add a content section
+  addContentSection: publicProcedure
+    .input(contentSectionSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Begin a transaction
+        return await ctx.db.transaction(async (tx) => {
+          // 1. Count existing content sections to determine order_index
+          const existingSections = await tx.query.contentSections.findMany({
+            where: eq(contentSections.post_id, input.postId),
+          });
+          
+          const orderIndex = existingSections.length;
+
+          // 2. Insert new content section
+          const insertResult = await tx
+            .insert(contentSections)
+            .values({
+              post_id: input.postId,
+              content: input.content,
+              order_index: orderIndex,
+            })
+            .returning();
+            
+          // Make sure we have a valid section
+          if (!insertResult || insertResult.length === 0) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create content section",
+            });
+          }
+          
+          const newSection = insertResult[0];
+
+          // 3. Insert images for this section if any
+          if (input.imageUrls && input.imageUrls.length > 0) {
+            const imageValues = input.imageUrls.map((url, index) => ({
+              section_id: newSection.id,
+              image_url: url,
+              order_index: index,
+            }));
+
+            await tx.insert(sectionImages).values(imageValues);
+          }
+
+          // 4. Also update the post's image_urls array for backward compatibility
+          const post = await tx.query.posts.findFirst({
+            where: eq(posts.id, input.postId),
+          });
+
+          if (post && input.imageUrls && input.imageUrls.length > 0) {
+            const existingImages = post.image_urls || [];
+            await tx
+              .update(posts)
+              .set({
+                image_urls: [...existingImages, ...input.imageUrls],
+                updated_at: new Date(),
+              })
+              .where(eq(posts.id, input.postId));
+          }
+
+          return { 
+            success: true, 
+            sectionId: newSection.id 
+          };
+        });
+      } catch (error) {
+        console.error("Error adding content section:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add content section",
+          cause: error,
+        });
+      }
+    }),
+});

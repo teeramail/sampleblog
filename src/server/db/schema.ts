@@ -139,8 +139,54 @@ export const forumPosts = createTable(
 );
 
 // Establish relationships
+// New table for content sections
+export const contentSections = createTable(
+  "content_sections",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    post_id: d.uuid().notNull().references(() => posts.id, { onDelete: "cascade" }),
+    content: d.text().notNull(),
+    created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+    order_index: d.integer().notNull(),
+  }),
+  (t) => [
+    index("content_sections_post_id_idx").on(t.post_id),
+    index("content_sections_created_at_idx").on(t.created_at),
+  ],
+);
+
+// New table for section images
+export const sectionImages = createTable(
+  "section_images",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    section_id: d.uuid().notNull().references(() => contentSections.id, { onDelete: "cascade" }),
+    image_url: d.text().notNull(),
+    order_index: d.integer().notNull(),
+  }),
+  (t) => [
+    index("section_images_section_id_idx").on(t.section_id),
+  ],
+);
+
 export const postsRelations = relations(posts, ({ many }) => ({
   answers: many(answers),
+  contentSections: many(contentSections),
+}));
+
+export const contentSectionsRelations = relations(contentSections, ({ one, many }) => ({
+  post: one(posts, {
+    fields: [contentSections.post_id],
+    references: [posts.id],
+  }),
+  images: many(sectionImages),
+}));
+
+export const sectionImagesRelations = relations(sectionImages, ({ one }) => ({
+  section: one(contentSections, {
+    fields: [sectionImages.section_id],
+    references: [contentSections.id],
+  }),
 }));
 
 // Forum relationships

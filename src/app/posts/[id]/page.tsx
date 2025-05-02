@@ -1,57 +1,135 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import { notFound, useParams, useRouter } from 'next/navigation';
-import { api } from '~/trpc/react';
-import { QACard } from '../../../app/components/QACard';
+import React from 'react';
+import { notFound } from 'next/navigation';
+import { api } from "~/trpc/server";
+import { QACard } from "~/app/components/QACard";
+import Image from "next/image";
 import { AnswerFormWrapper } from './AnswerFormWrapper';
 import { FollowUpQuestionWrapper } from './FollowUpQuestionWrapper';
 import type { Answer } from '../../../server/db/types';
 
-export default function PostDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const postId = params?.id as string;
+// Define ContentSection type inline to avoid import issues
+interface ContentSection {
+  id: string;
+  content: string;
+  createdAt: Date;
+  imageUrls: string[];
+}
 
-  if (!postId) {
+// Format date for display
+function formatDate(date: Date | null): string {
+  if (!date) return 'Unknown date';
+  return new Date(date).toLocaleDateString();
+}
+
+export default async function PostDetailPage({ params }: { params: { id: string } }) {
+  const id = params.id;
+  
+  if (!id) {
     return notFound();
   }
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { data: post, isLoading: isPostLoading, error: postError } = 
-    api.post.getById.useQuery({ id: postId });
+  try {
+    // Fetch post data
+    const post = await api.post.getById({ id });
     
-  const { data: answers = [], isLoading: isAnswersLoading } = 
-    api.answer.getByPostId.useQuery({ postId });
-  
-  useEffect(() => {
-    if (!isPostLoading && !isAnswersLoading) {
-      setIsLoading(false);
-      if (postError) {
-        setError("Error loading post details");
-      }
+    if (!post) {
+      return notFound();
     }
-  }, [isPostLoading, isAnswersLoading, postError]);
-  
-  // Redirect to 404 if post not found and not loading
-  if (!isLoading && !post) {
-    router.push('/404');
-    return null;
-  }
-  
-  if (isLoading) {
+    
+    // Fetch content sections
+    let contentSections: ContentSection[] = [];
+    try {
+      contentSections = await api.post.getContentSections({ postId: id });
+    } catch (error) {
+      console.error('Error fetching content sections:', error);
+      // Continue without content sections if there's an error
+    }
+    
+    // Fetch answers
+    let answers: Answer[] = [];
+    try {
+      const answerData = await api.post.getAnswers({ postId: id });
+      answers = answerData.map((answer: any) => ({
+        id: answer.id,
+        content: answer.content,
+        imageUrls: answer.image_urls || [],
+        authorName: answer.author_name || null,
+        createdAt: answer.created_at || new Date(),
+        isVerified: answer.is_verified || false
+      }));
+    } catch (error) {
+      console.error('Error fetching answers:', error);
+      // Continue without answers if there's an error
+    }
+    
+    // Fetch related posts
+    let relatedPosts: any[] = [];
+    try {
+      relatedPosts = await api.post.getRelated({ id });
+    } catch (error) {
+      console.error('Error fetching related posts:', error);
+      // Continue without related posts if there's an error
+    }
+
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
+          <p className="text-gray-600">
+            Posted by {post.author_name || 'Anonymous'} • {new Date(post.created_at).toLocaleDateString()}
+          </p>
         </div>
+
+        <div className="mb-8">
+          <QACard
+            content={post.content || ""}
+            imageUrls={post.image_urls || []}
+            authorName={post.author_name}
+            createdAt={post.created_at}
+            isVerified={post.is_verified}
+            isQuestion={true}
+            contentSections={contentSections}
+          />
+        </div>
+
+        <section className="mb-8">
+          {/* Answers Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Answers</h2>
+            
+            {answers.length > 0 ? (
+              <div className="space-y-6">
+                {answers.map((answer) => (
+                  <QACard
+                    key={answer.id}
+                    content={answer.content}
+                    imageUrls={answer.image_urls || []}
+                    authorName={answer.author_name}
+                    createdAt={answer.created_at || new Date()}
+                    isVerified={answer.is_verified}
+                    isQuestion={false}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No answers yet. Be the first to answer!</p>
+            )}
+            
+            <div className="mt-6">
+              <AnswerFormWrapper postId={id} />
+            </div>
+          </div>
+          
+          {/* Follow-up Questions */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Ask a Follow-up Question</h2>
+            <FollowUpQuestionWrapper postId={id} />
+          </div>
+        </section>
       </div>
     );
-  }
-  
-  if (error) {
+  } catch (error) {
+    console.error('Error fetching post data:', error);
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-md bg-red-50 p-4 text-red-500">
@@ -60,62 +138,4 @@ export default function PostDetailPage() {
       </div>
     );
   }
-  
-  if (!post) {
-    return null; // This shouldn't happen due to the redirect, but TypeScript needs it
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">{post.title}</h1>
-        <div className="mt-2 text-sm text-gray-500">
-          Posted {post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown date'}
-          {post.author_name && <span> by {post.author_name}</span>}
-        </div>
-      </header>
-
-      <div className="mb-8">
-        <QACard
-          content={post.content}
-          imageUrls={post.image_urls}
-          authorName={post.author_name}
-          createdAt={post.created_at || new Date()}
-          isQuestion={true}
-        />
-      </div>
-
-      <section className="mb-8">
-        <h2 className="mb-4 text-2xl font-semibold">
-          {answers.length} {answers.length === 1 ? 'Answer' : 'Answers'}
-        </h2>
-
-        {answers.length > 0 ? (
-          <div className="space-y-6">
-            {answers.map((answer: Answer) => (
-              <QACard
-                key={answer.id}
-                content={answer.content}
-                imageUrls={answer.imageUrls}
-                authorName={answer.authorName}
-                createdAt={answer.createdAt || new Date()}
-                isVerified={answer.isVerified}
-                isQuestion={false}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500">No answers yet. Be the first to answer!</p>
-        )}
-      </section>
-
-      <section className="mb-8">
-        <AnswerFormWrapper postId={postId} />
-      </section>
-
-      <section>
-        <FollowUpQuestionWrapper postId={postId} />
-      </section>
-    </div>
-  );
-} 
+}

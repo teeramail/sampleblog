@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { api } from "~/trpc/react";
 import Link from "next/link";
+import { ImageUploader } from "~/components/admin/ImageUploader";
+import { toast } from "react-hot-toast";
 
 export default function AddContentPage() {
   const router = useRouter();
@@ -12,6 +14,11 @@ export default function AddContentPage() {
   const [newContent, setNewContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Image upload state
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [thumbnailIndex, setThumbnailIndex] = useState(0);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   
   // Fetch the post data to display title
   const { data: post, isLoading: isLoadingPost, error: postError } = api.post.getById.useQuery(
@@ -28,36 +35,114 @@ export default function AddContentPage() {
     }
   }, [postError]);
   
-  // Append content mutation
-  const appendMutation = api.post.appendContent.useMutation({
+  // Add content section mutation
+  const addContentSectionMutation = api.post.addContentSection.useMutation({
     onSuccess: () => {
+      setNewContent("");
+      setUploadedImages([]);
+      setThumbnailIndex(0);
+      setIsUploadingImages(false);
+      toast.success("Content added successfully!");
       router.push(`/admin/posts/${id}`);
     },
     onError: (error) => {
-      setError(error.message);
-      setIsSubmitting(false);
-    }
+      console.error("Error adding content:", error);
+      setError("Failed to add content. Please try again.");
+      toast.error("Failed to add content. Please try again.");
+    },
   });
   
+  // Handle image uploads
+  const handleImagesChange = useCallback((files: File[]) => {
+    setUploadedImages(files);
+  }, []);
+  
+  // Handle thumbnail selection
+  const handleThumbnailChange = useCallback((index: number) => {
+    setThumbnailIndex(index);
+  }, []);
+  
+  // Convert File objects to base64 strings for submission
+  const convertImagesToBase64 = async (files: File[]): Promise<string[]> => {
+    if (!files.length) return [];
+    
+    const filePromises = files.map(file => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result);
+        };
+        reader.onerror = () => {
+          reject(new Error(`Failed to read file: ${file.name}`));
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+    
+    try {
+      return await Promise.all(filePromises);
+    } catch (error) {
+      console.error("Error converting images to base64:", error);
+      throw error;
+    }
+  };
+  
+  // Process images for upload (client-side optimization)
+  const processImages = async (files: File[]): Promise<string[]> => {
+    if (!files.length) return [];
+    
+    try {
+      // In a real app, you might resize/compress images here
+      // For now, we'll just convert them to base64
+      const base64Images = await convertImagesToBase64(files);
+      return base64Images;
+    } catch (error) {
+      console.error("Error processing images:", error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newContent.trim()) {
+      toast.error("Please enter some content");
       setError("Content cannot be empty");
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
-      await appendMutation.mutateAsync({
-        id: id as string,
-        newContent: newContent
+      // Process images if any
+      let processedImages: string[] = [];
+      
+      if (uploadedImages.length > 0) {
+        setIsUploadingImages(true);
+        try {
+          processedImages = await processImages(uploadedImages);
+          setIsUploadingImages(false);
+        } catch (err) {
+          console.error("Error processing images:", err);
+          setError("Failed to process images. Please try again with smaller images.");
+          setIsSubmitting(false);
+          setIsUploadingImages(false);
+          return;
+        }
+      }
+      
+      // Add the content section with its associated images
+      await addContentSectionMutation.mutateAsync({
+        postId: id as string,
+        content: newContent,
+        imageUrls: processedImages.length > 0 ? processedImages : undefined
       });
     } catch (error) {
       // Error is handled by the mutation's onError
       console.error("Error adding content:", error);
+      setIsSubmitting(false);
     }
   };
   
@@ -119,13 +204,34 @@ export default function AddContentPage() {
           </p>
         </div>
         
+        <div className="space-y-6 mt-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Images
+            </label>
+            <ImageUploader 
+              onImagesChange={handleImagesChange}
+              maxImages={10}
+              thumbnailIndex={thumbnailIndex}
+              onThumbnailChange={handleThumbnailChange}
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              Upload images to include with this content. The first image (or selected thumbnail) will be displayed prominently.
+            </p>
+          </div>
+        </div>
+        
         <div className="pt-4">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingImages}
             className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSubmitting ? "Adding Content..." : "Add Content"}
+            {isUploadingImages 
+              ? "Processing Images..." 
+              : isSubmitting 
+                ? "Adding Content..." 
+                : "Add Content"}
           </button>
         </div>
       </form>
