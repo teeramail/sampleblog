@@ -43,12 +43,10 @@ export function FollowUpQuestionForm({ postId, onQuestionAdded }: FollowUpQuesti
       return;
     }
     
+    // Only send the fields that the API expects
     createQuestion.mutate({
       relatedPostId: postId,
-      content,
-      authorName: authorName || undefined,
-      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-      isQuestion: true
+      content
     });
   };
 
