@@ -148,7 +148,10 @@ export function ImageUploader({
     
     setPreviews(prev => {
       const newPreviews = [...prev];
-      URL.revokeObjectURL(newPreviews[index]);
+      const previewUrl = newPreviews[index];
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
       newPreviews.splice(index, 1);
       return newPreviews;
     });
