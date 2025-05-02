@@ -168,18 +168,26 @@ export const postRouter = createTRPCRouter({
             });
             
             if (cursorPost) {
-              // Use the reference post ID for pagination
-              // Since created_at might be null, we'll use ID as a fallback
-              items = await ctx.db.select()
-                .from(posts)
-                .orderBy(desc(posts.id)) // Order by ID descending
-                .where(lt(posts.id, cursorPost.id)) // Get posts with ID less than cursor
-                .limit(limit);
+              // Use the reference post updated_at for pagination
+              // Handle case where updated_at might be null
+              if (cursorPost.updated_at) {
+                items = await ctx.db.select()
+                  .from(posts)
+                  .orderBy(desc(posts.updated_at)) // Order by updated_at descending
+                  .where(lt(posts.updated_at, cursorPost.updated_at)) // Get posts with updated_at less than cursor
+                  .limit(limit);
+              } else {
+                // Fallback to ordering by ID if updated_at is null
+                items = await ctx.db.select()
+                  .from(posts)
+                  .orderBy(desc(posts.updated_at)) // Still order by updated_at
+                  .limit(limit);
+              }
             } else {
               // Fallback if cursor post not found
               items = await ctx.db.select()
                 .from(posts)
-                .orderBy(desc(posts.id)) // Order by ID descending
+                .orderBy(desc(posts.updated_at)) // Order by updated_at descending
                 .limit(limit);
             }
           } catch (err) {
@@ -187,14 +195,14 @@ export const postRouter = createTRPCRouter({
             // Fallback to non-cursor query
             items = await ctx.db.select()
               .from(posts)
-              .orderBy(desc(posts.id)) // Order by ID descending
+              .orderBy(desc(posts.updated_at)) // Order by updated_at descending
               .limit(limit);
           }
         } else {
           // No cursor, just get the first page
           items = await ctx.db.select()
             .from(posts)
-            .orderBy(desc(posts.id)) // Order by ID descending
+            .orderBy(desc(posts.updated_at)) // Order by updated_at descending
             .limit(limit);
         }
         
@@ -236,7 +244,7 @@ export const postRouter = createTRPCRouter({
         const results = await ctx.db.select()
           .from(posts)
           .where(like(posts.title, searchPattern))
-          .orderBy(desc(posts.id)) // Order by ID descending for consistency with getAll
+          .orderBy(desc(posts.updated_at)) // Order by updated_at descending for consistency with getAll
           .limit(input.limit);
         
         const items = results;
