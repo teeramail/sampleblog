@@ -42,16 +42,15 @@ function formatDate(date: Date | null | undefined): string {
   return new Date(date).toLocaleDateString();
 }
 
-// Define page props according to Next.js 15 conventions
-type Props = {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+// Define params type for this page
+type PostParams = {
+  id: string;
 };
 
 // Generate metadata for the page
 export async function generateMetadata({ 
   params 
-}: Props): Promise<Metadata> {
+}: { params: PostParams }): Promise<Metadata> {
   // Safely fetch post data for metadata
   try {
     const id = params.id;
@@ -80,7 +79,10 @@ export async function generateMetadata({
 export default async function PostDetailPage({ 
   params,
   searchParams 
-}: Props) {
+}: { 
+  params: PostParams;
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const id = params.id;
   
   if (!id) {
