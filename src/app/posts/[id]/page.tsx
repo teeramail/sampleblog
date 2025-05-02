@@ -68,19 +68,19 @@ export default function PostDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold">{post.subject}</h1>
+        <h1 className="text-3xl font-bold">{post.title}</h1>
         <div className="mt-2 text-sm text-gray-500">
-          Posted {new Date(post.createdAt).toLocaleDateString()}
-          {post.authorName && <span> by {post.authorName}</span>}
+          Posted {post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown date'}
+          {post.author_name && <span> by {post.author_name}</span>}
         </div>
       </header>
 
       <div className="mb-8">
         <QACard
           content={post.content}
-          imageUrls={post.imageUrls}
-          authorName={post.authorName}
-          createdAt={post.createdAt}
+          imageUrls={post.image_urls}
+          authorName={post.author_name}
+          createdAt={post.created_at || new Date()}
           isQuestion={true}
         />
       </div>
@@ -98,7 +98,7 @@ export default function PostDetailPage() {
                 content={answer.content}
                 imageUrls={answer.imageUrls}
                 authorName={answer.authorName}
-                createdAt={answer.createdAt}
+                createdAt={answer.createdAt || new Date()}
                 isVerified={answer.isVerified}
                 isQuestion={false}
               />
