@@ -5,27 +5,26 @@ import { QACard } from "~/app/components/QACard";
 import Image from "next/image";
 import { AnswerFormWrapper } from './AnswerFormWrapper';
 import { FollowUpQuestionWrapper } from './FollowUpQuestionWrapper';
+import type { Metadata } from 'next';
 
-// Define ContentSection type inline to avoid import issues
-interface ContentSection {
+// Define types for our data structures
+type ContentSection = {
   id: string;
   content: string;
   createdAt: Date;
   imageUrls: string[];
-}
+};
 
-// Define a simpler Answer type for our component
-interface AnswerDisplay {
+type AnswerDisplay = {
   id: string;
   content: string;
   imageUrls: string[];
   authorName: string | null;
   createdAt: Date;
   isVerified: boolean;
-}
+};
 
-// Define post type
-interface Post {
+type Post = {
   id: string;
   title: string;
   content: string;
@@ -35,20 +34,53 @@ interface Post {
   is_active: boolean;
   is_question: boolean;
   author_name: string | null;
-}
+};
 
-// Format date for display
-function formatDate(date: Date | null): string {
+// Format date for display with null safety
+function formatDate(date: Date | null | undefined): string {
   if (!date) return 'Unknown date';
   return new Date(date).toLocaleDateString();
 }
 
-interface PageProps {
+// Define page props according to Next.js 15 conventions
+type Props = {
   params: { id: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+// Generate metadata for the page
+export async function generateMetadata({ 
+  params 
+}: Props): Promise<Metadata> {
+  // Safely fetch post data for metadata
+  try {
+    const id = params.id;
+    const post = await api.post.getById({ id });
+    
+    if (!post) {
+      return {
+        title: 'Post not found',
+        description: 'The requested post could not be found',
+      };
+    }
+    
+    return {
+      title: post.title || `Post ${id}`,
+      description: post.content?.substring(0, 160) || 'Post detail page',
+    };
+  } catch (error) {
+    return {
+      title: 'Post',
+      description: 'Post detail page',
+    };
+  }
 }
 
-export default async function PostDetailPage({ params, searchParams }: PageProps) {
+// Main page component
+export default async function PostDetailPage({ 
+  params,
+  searchParams 
+}: Props) {
   const id = params.id;
   
   if (!id) {
@@ -56,42 +88,45 @@ export default async function PostDetailPage({ params, searchParams }: PageProps
   }
 
   try {
-    // Fetch post data using the standard API
-    const post = await api.post.getById({ id }) as Post;
+    // Fetch post data
+    const post = await api.post.getById({ id });
     
     if (!post) {
       return notFound();
     }
     
-    // Fetch content sections
+    // Safely cast the post to our type
+    const typedPost = post as unknown as Post;
+    
+    // Initialize empty arrays for our data
     let contentSections: ContentSection[] = [];
+    let answers: AnswerDisplay[] = [];
+    let relatedPosts: Post[] = [];
+    
+    // Try to fetch content sections if the API supports it
     try {
-      // Use the correct API endpoint
-      const sectionsData = await api.post.getContentSections({ postId: id });
-      contentSections = sectionsData as ContentSection[];
+      // @ts-ignore - API method might not exist in type definitions
+      const sectionsData = await api.post.getContentSections?.({ postId: id });
+      if (sectionsData && Array.isArray(sectionsData)) {
+        contentSections = sectionsData.map(section => ({
+          id: section.id || '',
+          content: section.content || '',
+          createdAt: section.createdAt ? new Date(section.createdAt) : new Date(),
+          imageUrls: Array.isArray(section.imageUrls) ? section.imageUrls : []
+        }));
+      }
     } catch (error) {
-      console.error('Error fetching content sections:', error);
-      // Continue without content sections if there's an error
+      console.error('Content sections not available:', error);
     }
     
-    // Fetch answers
-    let answers: AnswerDisplay[] = [];
+    // Try to fetch answers if the API supports it
     try {
-      // For server components, we need to handle this differently
-      // Since the API might not have getAnswers, we'll use a fallback approach
-      let answerData: any[] = [];
-      try {
-        // Try to get answers from the API
-        // @ts-ignore - Ignore TypeScript errors for API methods that might not exist in type definitions
-        answerData = await api.post.getAnswers({ postId: id });
-      } catch (err) {
-        console.error('API method not available, using empty array:', err);
-      }
-      
-      if (Array.isArray(answerData)) {
-        answers = answerData.map((answer: any) => ({
-          id: answer.id,
-          content: answer.content,
+      // @ts-ignore - API method might not exist in type definitions
+      const answerData = await api.post.getAnswers?.({ postId: id });
+      if (answerData && Array.isArray(answerData)) {
+        answers = answerData.map(answer => ({
+          id: answer.id || '',
+          content: answer.content || '',
           imageUrls: Array.isArray(answer.image_urls) ? answer.image_urls : [],
           authorName: answer.author_name || null,
           createdAt: answer.created_at ? new Date(answer.created_at) : new Date(),
@@ -99,39 +134,37 @@ export default async function PostDetailPage({ params, searchParams }: PageProps
         }));
       }
     } catch (error) {
-      console.error('Error fetching answers:', error);
-      // Continue without answers if there's an error
+      console.error('Answers not available:', error);
     }
     
-    // Fetch related posts
-    let relatedPosts: Post[] = [];
+    // Try to fetch related posts if the API supports it
     try {
-      // For server components, we need to handle this differently
-      // @ts-ignore - Ignore TypeScript errors for API methods that might not exist in type definitions
-      const relatedData = await api.post.getRelated({ id });
-      relatedPosts = Array.isArray(relatedData) ? relatedData as Post[] : [];
+      // @ts-ignore - API method might not exist in type definitions
+      const relatedData = await api.post.getRelated?.({ id });
+      if (relatedData && Array.isArray(relatedData)) {
+        relatedPosts = relatedData as unknown as Post[];
+      }
     } catch (error) {
-      console.error('Error fetching related posts:', error);
-      // Continue without related posts if there's an error
+      console.error('Related posts not available:', error);
     }
 
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
+          <h1 className="text-3xl font-bold mb-2">{typedPost.title}</h1>
           <p className="text-gray-600">
-            Posted by {post.author_name || 'Anonymous'} • {formatDate(post.created_at)}
+            Posted by {typedPost.author_name || 'Anonymous'} • {formatDate(typedPost.created_at)}
           </p>
         </div>
 
         <div className="mb-8">
           <QACard
-            content={post.content || ""}
-            imageUrls={post.image_urls || []}
-            authorName={post.author_name}
-            createdAt={post.created_at}
+            content={typedPost.content || ""}
+            imageUrls={typedPost.image_urls || []}
+            authorName={typedPost.author_name}
+            createdAt={typedPost.created_at || new Date()}
             isVerified={false} /* Default to false as this field doesn't exist in the post type */
-            isQuestion={post.is_question}
+            isQuestion={typedPost.is_question}
             contentSections={contentSections}
           />
         </div>
@@ -170,14 +203,43 @@ export default async function PostDetailPage({ params, searchParams }: PageProps
             <FollowUpQuestionWrapper postId={id} />
           </div>
         </section>
+
+        {/* Related Posts */}
+        {relatedPosts.length > 0 && (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Related Posts</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {relatedPosts.map((relatedPost) => (
+                <div
+                  key={relatedPost.id}
+                  className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold mb-2">
+                      <a
+                        href={`/posts/${relatedPost.id}`}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        {relatedPost.title}
+                      </a>
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {formatDate(relatedPost.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   } catch (error) {
-    console.error('Error fetching post data:', error);
+    console.error('Error in PostDetailPage:', error);
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-md bg-red-50 p-4 text-red-500">
-          Error: Unable to load post details. Please try again later.
+          Error loading post details. Please try again later.
         </div>
       </div>
     );
