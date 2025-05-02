@@ -10,8 +10,8 @@ const config = {
   async rewrites() {
     return [
       {
-        source: '/:path*',
-        destination: '/:path*',
+        source: '/admin/:path*',
+        destination: '/admin/:path*',
       },
       {
         source: '/api/:path*',
