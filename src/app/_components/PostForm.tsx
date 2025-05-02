@@ -298,14 +298,29 @@ export function PostForm({ initialData, isEditMode = false }: PostFormProps) {
     setError("");
     
     try {
+      // Map form data to the API expected structure
+      const apiFormData = {
+        title: formData.subject, // Map subject to title
+        content: formData.content,
+        is_active: formData.isActive, // Map isActive to is_active
+        is_question: true, // Default to true for is_question
+        author_name: "", // Default empty author_name
+        image_urls: [...formData.imageUrls] // Map imageUrls to image_urls
+      };
+      
+      // Add thumbnail as the first image if it exists
+      if (formData.thumbnailUrl && !apiFormData.image_urls.includes(formData.thumbnailUrl)) {
+        apiFormData.image_urls = [formData.thumbnailUrl, ...apiFormData.image_urls];
+      }
+      
       // Files have already been uploaded at this point, so we just submit the form data
       if (isEditMode && initialData?.id) {
         await updateMutation.mutateAsync({
           id: initialData.id,
-          ...formData
+          ...apiFormData
         });
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(apiFormData);
       }
       
       // Success - redirect handled in mutation callbacks
