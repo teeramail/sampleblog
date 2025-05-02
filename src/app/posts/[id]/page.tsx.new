@@ -42,7 +42,7 @@ function formatDate(date: Date | null | undefined): string {
   return new Date(date).toLocaleDateString();
 }
 
-// Generate metadata for the page
+// Define the metadata generation function
 export async function generateMetadata({ 
   params 
 }: { 

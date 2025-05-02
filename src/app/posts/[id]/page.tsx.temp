@@ -1,0 +1,122 @@
+import React from 'react';
+import { notFound } from 'next/navigation';
+import { api } from "~/trpc/server";
+import { QACard } from "~/app/components/QACard";
+import { AnswerFormWrapper } from './AnswerFormWrapper';
+import { FollowUpQuestionWrapper } from './FollowUpQuestionWrapper';
+import type { Metadata } from 'next';
+
+// Format date for display with null safety
+function formatDate(date: Date | null | undefined): string {
+  if (!date) return 'Unknown date';
+  return new Date(date).toLocaleDateString();
+}
+
+// Define the metadata generation function
+export async function generateMetadata({ 
+  params 
+}: { 
+  params: { id: string } 
+}): Promise<Metadata> {
+  try {
+    const id = params.id;
+    const post = await api.post.getById({ id });
+    
+    if (!post) {
+      return {
+        title: 'Post not found',
+        description: 'The requested post could not be found',
+      };
+    }
+    
+    return {
+      title: post.title || `Post ${id}`,
+      description: post.content?.substring(0, 160) || 'Post detail page',
+    };
+  } catch (error) {
+    return {
+      title: 'Post',
+      description: 'Post detail page',
+    };
+  }
+}
+
+// Main page component
+export default async function Page({ 
+  params 
+}: { 
+  params: { id: string } 
+}) {
+  const id = params.id;
+  
+  if (!id) {
+    return notFound();
+  }
+
+  try {
+    // Fetch post data
+    const post = await api.post.getById({ id });
+    
+    if (!post) {
+      return notFound();
+    }
+    
+    // Initialize empty arrays for our data
+    let contentSections = [];
+    
+    // Try to fetch content sections if the API supports it
+    try {
+      const sectionsData = await api.post.getContentSections({ postId: id });
+      if (sectionsData && Array.isArray(sectionsData)) {
+        contentSections = sectionsData;
+      }
+    } catch (error) {
+      console.error('Content sections not available:', error);
+    }
+
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
+          <p className="text-gray-600">
+            Posted by {post.author_name || 'Anonymous'} • {formatDate(post.created_at)}
+          </p>
+        </div>
+
+        <div className="mb-8">
+          <QACard
+            content={post.content || ""}
+            imageUrls={post.image_urls || []}
+            authorName={post.author_name}
+            createdAt={post.created_at || new Date()}
+            isVerified={false}
+            isQuestion={post.is_question}
+            contentSections={contentSections}
+          />
+        </div>
+
+        <section className="mb-8">
+          {/* Answer Form */}
+          <div className="mt-6">
+            <AnswerFormWrapper postId={id} />
+          </div>
+          
+          {/* Follow-up Questions */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Ask a Follow-up Question</h2>
+            <FollowUpQuestionWrapper postId={id} />
+          </div>
+        </section>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error in Page:', error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="rounded-md bg-red-50 p-4 text-red-500">
+          Error loading post details. Please try again later.
+        </div>
+      </div>
+    );
+  }
+}
