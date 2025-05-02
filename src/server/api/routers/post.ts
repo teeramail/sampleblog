@@ -32,6 +32,7 @@ const followUpQuestionSchema = z.object({
 const appendContentSchema = z.object({
   id: z.string().uuid(),
   newContent: z.string().min(1, "New content is required"),
+  newImageUrls: z.array(z.string()).optional(),
 });
 
 // Function to format appended content with timestamp
@@ -340,7 +341,7 @@ export const postRouter = createTRPCRouter({
     .input(appendContentSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const { id, newContent } = input;
+        const { id, newContent, newImageUrls } = input;
         
         // Check if post exists
         const existingPost = await ctx.db.query.posts.findFirst({
@@ -358,11 +359,22 @@ export const postRouter = createTRPCRouter({
         const originalContent = existingPost.content;
         const formattedContent = formatAppendedContent(originalContent, newContent);
         
+        // Prepare update data
+        const updateData: Record<string, any> = {
+          content: formattedContent,
+          updated_at: new Date()
+        };
+        
+        // Add new images if provided
+        if (newImageUrls && newImageUrls.length > 0) {
+          // Combine existing images with new ones
+          const existingImages = existingPost.image_urls || [];
+          updateData.image_urls = [...existingImages, ...newImageUrls];
+        }
+        
         // Update the post
         const result = await ctx.db.update(posts)
-          .set({
-            content: formattedContent
-          })
+          .set(updateData)
           .where(eq(posts.id, id))
           .returning();
           
