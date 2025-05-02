@@ -24,7 +24,7 @@ export const env = createEnv({
     AWS_REGION: z.string().optional(),
     AWS_ENDPOINT: z.string().url().optional(),
     AWS_PUBLIC_URL: z.string().url().optional(),
-    AWS_S3_ROOT_FOLDER: z.string().optional().default("realland-app"),
+    AWS_S3_ROOT_FOLDER: z.string().optional(),
     // Auth
     AUTH_SECRET: z.string().optional(),
   },

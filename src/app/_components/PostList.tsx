@@ -7,16 +7,25 @@ import Image from "next/image";
 
 const defaultThumbnailUrl = "https://via.placeholder.com/150x150?text=No+Image";
 
-// Define Post type
+// Helper function to safely get the thumbnail URL
+const getThumbnailUrl = (post: Post): string => {
+  if (post.image_urls && post.image_urls.length > 0 && post.image_urls[0]) {
+    return post.image_urls[0];
+  }
+  return defaultThumbnailUrl;
+};
+
+// Define Post type to match API response structure
 type Post = {
   id: string;
-  subject: string;
+  title: string; // API uses title instead of subject
   content: string;
-  thumbnailUrl: string;
-  imageUrls: string[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  image_urls: string[] | null; // API uses snake_case
+  is_active: boolean; // API uses snake_case
+  is_question: boolean; // Required field from API
+  author_name: string | null; // Required field from API
+  created_at: Date | null; // API uses snake_case
+  updated_at: Date | null; // API uses snake_case
 };
 
 export function PostList() {
@@ -154,17 +163,18 @@ export function PostList() {
                     <div className="flex items-center">
                       <div className="h-12 w-12 flex-shrink-0">
                         <Image
-                          src={post.thumbnailUrl ?? defaultThumbnailUrl}
-                          alt={`${post.subject} thumbnail`}
+                          src={getThumbnailUrl(post)}
+                          alt={`${post.title} thumbnail`}
                           width={48}
                           height={48}
                           className="h-12 w-12 rounded object-cover"
+                          unoptimized
                         />
                       </div>
                       <div className="ml-4">
-                        <div className="font-medium text-gray-900">{post.subject}</div>
+                        <div className="font-medium text-gray-900">{post.title}</div>
                         <div className="text-sm text-gray-500">
-                          {post.imageUrls.length} {post.imageUrls.length === 1 ? 'image' : 'images'}
+                          {post.image_urls ? `${post.image_urls.length} ${post.image_urls.length === 1 ? 'image' : 'images'}` : 'No images'}
                         </div>
                       </div>
                     </div>
@@ -176,16 +186,16 @@ export function PostList() {
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                      post.isActive 
+                      post.is_active 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {post.isActive ? 'Active' : 'Inactive'}
+                      {post.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    <div>Created: {formatDate(post.createdAt)}</div>
-                    <div>Updated: {formatDate(post.updatedAt)}</div>
+                    <div>Created: {post.created_at ? formatDate(post.created_at) : 'N/A'}</div>
+                    <div>Updated: {post.updated_at ? formatDate(post.updated_at) : 'N/A'}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <Link
