@@ -34,28 +34,53 @@ export default function EditPostPage() {
     { id: id as string },
     { 
       enabled: !!id,
-      onSuccess: (data) => {
-        setFormData({
-          title: data.title,
-          content: data.content,
-          author_name: data.author_name || "",
-          is_active: data.is_active,
-          is_question: data.is_question,
-        });
-        
-        // Set existing images if any
-        if (data.image_urls && data.image_urls.length > 0) {
-          setExistingImageUrls(data.image_urls);
-        }
-        
-        setIsLoading(false);
-      },
-      onError: (err) => {
-        setError(`Failed to load post: ${err.message}`);
-        setIsLoading(false);
-      }
+      retry: 2, // Retry failed requests twice
+      retryDelay: 1000, // Wait 1 second between retries
     }
   );
+  
+  // Handle successful data loading
+  useEffect(() => {
+    if (post && !isLoadingPost) {
+      setFormData({
+        title: post.title,
+        content: post.content,
+        author_name: post.author_name || "",
+        is_active: post.is_active,
+        is_question: post.is_question,
+      });
+      
+      // Set existing images if any
+      if (post.image_urls && post.image_urls.length > 0) {
+        setExistingImageUrls(post.image_urls);
+      }
+      
+      setIsLoading(false);
+    }
+  }, [post, isLoadingPost]);
+  
+  // Handle errors
+  useEffect(() => {
+    if (fetchError) {
+      console.error("Error loading post:", fetchError);
+      setError(`Failed to load post: ${fetchError.message}`);
+      setIsLoading(false);
+    }
+  }, [fetchError]);
+  
+  // Add timeout handling for the query
+  useEffect(() => {
+    // Set a timeout to handle cases where the query hangs
+    const timeoutId = setTimeout(() => {
+      if (isLoadingPost) {
+        console.log("Post fetch timeout for ID:", id);
+        setError("Request timed out. The post may not exist or the database connection is slow.");
+        setIsLoading(false);
+      }
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLoadingPost, id]);
   
   // Update mutation
   const updateMutation = api.post.update.useMutation({
@@ -110,8 +135,8 @@ export default function EditPostPage() {
     try {
       return await Promise.all(filePromises);
     } catch (error) {
-      console.error('Error converting images to base64:', error);
-      return [];
+      console.error("Error converting images to base64:", error);
+      throw error;
     }
   };
   
@@ -119,27 +144,15 @@ export default function EditPostPage() {
   const processImages = async (files: File[]): Promise<string[]> => {
     if (!files.length) return [];
     
-    // Ensure the first image (thumbnail) is processed first
-    const thumbnailFile = files[thumbnailIndex];
-    const otherFiles = files.filter((_, index) => index !== thumbnailIndex);
-    
-    // Process the thumbnail first, then the rest
-    // Make sure we don't include undefined values
-    const processedFiles: File[] = [];
-    if (thumbnailFile) processedFiles.push(thumbnailFile);
-    processedFiles.push(...otherFiles.filter((file): file is File => file !== undefined));
-    
-    // In a real implementation, we would optimize images here with Sharp
-    // For the thumbnail, we would ensure it's less than 50KB
-    // For other images, we would ensure they're less than 120KB
-    // All images would be converted to WebP format
-    
-    // For now, we'll just convert them to base64 strings
-    // But we'll simulate the optimization by logging what would happen
-    console.log(`Thumbnail image would be optimized to WebP format and < 50KB`);
-    console.log(`${otherFiles.length} other images would be optimized to WebP format and < 120KB each`);
-    
-    return await convertImagesToBase64(processedFiles);
+    try {
+      // In a real app, you might resize/compress images here
+      // For now, we'll just convert them to base64
+      const base64Images = await convertImagesToBase64(files);
+      return base64Images;
+    } catch (error) {
+      console.error("Error processing images:", error);
+      throw error;
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,91 +161,105 @@ export default function EditPostPage() {
     setError(null);
     
     try {
-      // Process images if any
-      let imageUrls: string[] = [...existingImageUrls]; // Start with existing images
+      // Process images if there are any
+      let imageUrls: string[] = [];
       
       if (uploadedImages.length > 0) {
         setIsUploadingImages(true);
         
-        // Process and convert images
-        const processedImageUrls = await processImages(uploadedImages);
-        
-        if (processedImageUrls.length > 0) {
-          // If we're replacing all images
-          imageUrls = processedImageUrls;
+        try {
+          // Process images (resize, optimize)
+          const processedImages = await processImages(uploadedImages);
+          
+          // Convert to base64 for API submission
+          imageUrls = processedImages;
+          
+          setIsUploadingImages(false);
+        } catch (err) {
+          console.error("Error processing images:", err);
+          setError("Failed to process images. Please try again with smaller images.");
+          setIsSubmitting(false);
+          setIsUploadingImages(false);
+          return;
         }
-        
-        setIsUploadingImages(false);
       }
       
-      // Update the post with the form data and processed images
+      // Update the post
       await updateMutation.mutateAsync({
         id: id as string,
-        title: formData.title,
-        content: formData.content,
-        author_name: formData.author_name || undefined,
-        is_active: formData.is_active,
-        is_question: formData.is_question,
-        image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+        ...formData,
+        image_urls: imageUrls.length > 0 ? imageUrls : existingImageUrls,
+        // Note: If thumbnail_index is not part of the API, we need to remove it
+        // or ensure it's added to the API type definition
       });
       
-    } catch (error) {
-      console.error("Error updating post:", error);
+    } catch (err) {
+      console.error("Error updating post:", err);
       setError("Failed to update post. Please try again.");
       setIsSubmitting(false);
     }
   };
   
-  // Show loading state while fetching post data
+  // Show loading state while fetching data
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-xl">Loading post data...</div>
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Loading Post...</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            If this takes too long, the post might not exist or there could be a database connection issue.
+          </p>
+          <button 
+            onClick={() => router.reload()} 
+            className="mt-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
-  
-  // Show error if post couldn't be loaded
-  if (error && !post) {
+
+  // Show error state if there was an error
+  if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Edit Post</h1>
-          <Link 
-            href="/admin/posts"
-            className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
-          >
+          <Link href="/admin/posts" className="text-blue-500 hover:underline">
             Back to Posts
           </Link>
         </div>
-        
-        <div className="rounded-md bg-red-50 p-4 text-red-500">
-          {error}
+        <div className="rounded-md bg-red-50 p-8 text-center">
+          <p className="text-red-500">{error}</p>
+          <div className="mt-4 flex justify-center space-x-4">
+            <button 
+              onClick={() => router.reload()} 
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            >
+              Retry
+            </button>
+            <Link 
+              href="/admin/posts" 
+              className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+            >
+              Back to Posts
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
-  
+
+  // Main return for the component
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Edit Post</h1>
-        <Link 
-          href="/admin/posts"
-          className="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
-        >
+        <Link href="/admin/posts" className="text-blue-500 hover:underline">
           Back to Posts
         </Link>
-      </div>
-      
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-500">
-          {error}
-        </div>
-      )}
-      
+      </div>     
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
