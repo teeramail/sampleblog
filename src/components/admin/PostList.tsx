@@ -192,9 +192,6 @@ export function PostList() {
                   Content
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Customer ID
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -234,11 +231,6 @@ export function PostList() {
                   <td className="px-6 py-4">
                     <div className="max-w-xs text-sm text-gray-900">
                       {truncateText(post.content, 100)}
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm text-gray-500">
-                      {post.author_name || 'No author'}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
