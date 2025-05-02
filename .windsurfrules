@@ -1426,3 +1426,141 @@ alwaysApply: true
   - Document breaking changes
 
 Follow WINDSURF_RULES for proper rule formatting and structure of windsurf rule sections.
+
+---
+PROJECT_TECHNOLOGIES
+---
+description: Documentation of technologies and versions used in this project
+globs: **/*
+filesToApplyRule: **/*
+alwaysApply: true
+---
+
+- **Core Framework**
+  - Next.js: ^15.2.3 - React framework with server-side rendering and static site generation
+  - React: ^19.0.0 - JavaScript library for building user interfaces
+  - React DOM: ^19.0.0 - React package for working with the DOM
+  - TypeScript: ^5.8.2 - Typed superset of JavaScript
+
+- **Database and ORM**
+  - Drizzle ORM: ^0.41.0 - TypeScript ORM for SQL databases
+  - Drizzle Kit: ^0.30.5 - Migration and schema management tools
+  - Postgres: ^3.4.4 - PostgreSQL client for Node.js
+
+- **API and Data Fetching**
+  - tRPC: ^11.0.0 - End-to-end typesafe APIs
+  - Tanstack React Query: ^5.69.0 - Asynchronous state management
+  - Zod: ^3.24.2 - TypeScript-first schema validation
+
+- **UI and Styling**
+  - TailwindCSS: ^4.0.15 - Utility-first CSS framework
+  - Class Variance Authority: ^0.7.1 - Type-safe UI component variants
+  - clsx: ^2.1.1 - Utility for constructing className strings
+  - tailwind-merge: ^3.2.0 - Merge Tailwind CSS classes without conflicts
+
+- **Forms and Validation**
+  - React Hook Form: ^7.56.1 - Form state management and validation
+  - @hookform/resolvers: ^5.0.1 - Form validation resolvers
+
+- **File Storage and Upload**
+  - AWS SDK S3: ^3.797.0 - Amazon S3 client
+  - uploadthing: ^7.6.0 - File upload utilities
+  - formidable: ^3.5.4 - Form data parsing
+
+- **Development Tools**
+  - ESLint: ^9.23.0 - JavaScript and TypeScript linting
+  - Prettier: ^3.5.3 - Code formatting
+  - npm: 10.5.2 - Package manager
+
+- **Other Utilities**
+  - date-fns: ^4.1.0 - Date manipulation library
+  - superjson: ^2.2.1 - JSON serialization with support for additional types
+  - react-hot-toast: ^2.5.2 - Toast notifications
+
+- **Project Type**
+  - T3 Stack: Based on create-t3-app (version 7.39.3)
+  - Module Type: ESM (ECMAScript Modules)
+
+- **Technology Decisions**
+  - Use Next.js App Router for routing and layouts
+  - Use tRPC for type-safe API endpoints
+  - Use Drizzle ORM for database operations
+  - Use TailwindCSS for styling
+  - Use React Hook Form for form handling
+  - Use AWS S3 for file storage
+
+
+---
+TYPESCRIPT_SAFETY
+---
+description: Guidelines for writing type-safe TypeScript code to prevent common runtime errors
+globs: **/*.ts,**/*.tsx
+filesToApplyRule: **/*.ts,**/*.tsx
+alwaysApply: true
+---
+
+- **Null and Undefined Checks**
+  - Always check if a value might be null or undefined before using it in operations
+  - Use optional chaining (`?.`) when accessing properties of objects that might be null/undefined
+  - Use nullish coalescing (`??`) to provide fallback values
+  - Example: `const value = obj?.property ?? defaultValue;`
+
+- **Type Assertions and Guards**
+  - Avoid using type assertions (`as Type`) unless absolutely necessary
+  - Prefer type guards (`if (typeof value === 'string')`) over assertions
+  - When using type assertions, ensure the value actually matches the asserted type
+  - Example: `if (typeof value === 'string') { /* string operations */ }`
+
+- **Array Access Safety**
+  - Always check if an array index exists before accessing it
+  - Use optional chaining for array access: `array?.[index]`
+  - Check array length before accessing elements: `if (index < array.length)`
+  - Example: `const item = index < array.length ? array[index] : undefined;`
+
+- **DOM API Safety**
+  - Always check if DOM elements exist before manipulating them
+  - Use optional chaining when accessing DOM element properties
+  - Check if browser APIs are available before using them
+  - Example: `if (typeof URL !== 'undefined' && url) { URL.revokeObjectURL(url); }`
+
+- **Function Parameters**
+  - Use default parameter values for optional parameters
+  - Destructure objects with default values for properties
+  - Validate parameters before using them in critical operations
+  - Example: `function process(param: string = '', options: Options = {})`
+
+- **Async Operations**
+  - Always handle errors in Promise chains with `.catch()`
+  - Use try/catch blocks in async/await functions
+  - Check if async results exist before using them
+  - Example: 
+    ```typescript
+    try {
+      const result = await asyncOperation();
+      if (result) {
+        // use result
+      }
+    } catch (error) {
+      // handle error
+    }
+    ```
+
+- **Type Definitions**
+  - Define interfaces or types for complex objects
+  - Use union types to represent values that could be of different types
+  - Make properties optional when appropriate using the `?` modifier
+  - Example: `interface User { id: string; name: string; email?: string; }`
+
+- **URL and File Operations**
+  - Always check if URLs or file paths exist before operations
+  - Validate URL strings before creating URL objects
+  - For URL.revokeObjectURL, always check if the URL string exists
+  - Example:
+    ```typescript
+    const url = previews[index];
+    if (url && typeof url === 'string') {
+      URL.revokeObjectURL(url);
+    }
+    ```
+
+
