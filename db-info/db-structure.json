@@ -1,0 +1,683 @@
+{
+  "databaseName": "realestate",
+  "schemas": [
+    {
+      "name": "drizzle",
+      "tables": [
+        {
+          "name": "__drizzle_migrations",
+          "schema": "drizzle",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "position": 1,
+              "dataType": "integer",
+              "udtName": "int4",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "nextval('drizzle.__drizzle_migrations_id_seq'::regclass)",
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": 32,
+              "numericScale": 0,
+              "comment": null
+            },
+            {
+              "name": "hash",
+              "position": 2,
+              "dataType": "text",
+              "udtName": "text",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "position": 3,
+              "dataType": "bigint",
+              "udtName": "int8",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": 64,
+              "numericScale": 0,
+              "comment": null
+            }
+          ],
+          "primaryKey": [
+            "id"
+          ],
+          "foreignKeys": [],
+          "indexes": [
+            {
+              "indexName": "__drizzle_migrations_pkey",
+              "columnNames": [
+                "id"
+              ],
+              "isUnique": true,
+              "indexType": "btree",
+              "indexDef": "CREATE UNIQUE INDEX __drizzle_migrations_pkey ON drizzle.__drizzle_migrations USING btree (id)"
+            }
+          ],
+          "rowCount": "-1"
+        }
+      ]
+    },
+    {
+      "name": "public",
+      "tables": [
+        {
+          "name": "answer",
+          "schema": "public",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "position": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "gen_random_uuid()",
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "postId",
+              "position": 2,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "content",
+              "position": 3,
+              "dataType": "text",
+              "udtName": "text",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "imageUrls",
+              "position": 4,
+              "dataType": "ARRAY",
+              "udtName": "_text",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "authorName",
+              "position": 5,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 256,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "createdAt",
+              "position": 6,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "updatedAt",
+              "position": 7,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "isVerified",
+              "position": 8,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "false",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": [
+            "id"
+          ],
+          "foreignKeys": [
+            {
+              "constraintName": "answer_postId_post_id_fk",
+              "columnName": "postId",
+              "referencedSchema": "public",
+              "referencedTable": "post",
+              "referencedColumn": "id",
+              "updateRule": "NO ACTION",
+              "deleteRule": "CASCADE"
+            }
+          ],
+          "indexes": [
+            {
+              "indexName": "answer_created_at_idx",
+              "columnNames": [
+                "createdAt"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX answer_created_at_idx ON public.answer USING btree (\"createdAt\")"
+            },
+            {
+              "indexName": "answer_pkey",
+              "columnNames": [
+                "id"
+              ],
+              "isUnique": true,
+              "indexType": "btree",
+              "indexDef": "CREATE UNIQUE INDEX answer_pkey ON public.answer USING btree (id)"
+            },
+            {
+              "indexName": "answer_post_id_idx",
+              "columnNames": [
+                "postId"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX answer_post_id_idx ON public.answer USING btree (\"postId\")"
+            }
+          ],
+          "rowCount": "-1"
+        },
+        {
+          "name": "customer",
+          "schema": "public",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "position": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "gen_random_uuid()",
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "name",
+              "position": 2,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 256,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "email",
+              "position": 3,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 256,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "phone",
+              "position": 4,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 50,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "thumbnailUrl",
+              "position": 5,
+              "dataType": "text",
+              "udtName": "text",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "imageUrls",
+              "position": 6,
+              "dataType": "ARRAY",
+              "udtName": "_text",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "createdAt",
+              "position": 7,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "updatedAt",
+              "position": 8,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": [
+            "id"
+          ],
+          "foreignKeys": [],
+          "indexes": [
+            {
+              "indexName": "customer_email_idx",
+              "columnNames": [
+                "email"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX customer_email_idx ON public.customer USING btree (email)"
+            },
+            {
+              "indexName": "customer_name_idx",
+              "columnNames": [
+                "name"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX customer_name_idx ON public.customer USING btree (name)"
+            },
+            {
+              "indexName": "customer_pkey",
+              "columnNames": [
+                "id"
+              ],
+              "isUnique": true,
+              "indexType": "btree",
+              "indexDef": "CREATE UNIQUE INDEX customer_pkey ON public.customer USING btree (id)"
+            },
+            {
+              "indexName": "customer_updated_at_idx",
+              "columnNames": [
+                "updatedAt"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX customer_updated_at_idx ON public.customer USING btree (\"updatedAt\")"
+            }
+          ],
+          "rowCount": "-1"
+        },
+        {
+          "name": "post",
+          "schema": "public",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "position": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "gen_random_uuid()",
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "subject",
+              "position": 2,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 256,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "content",
+              "position": 3,
+              "dataType": "text",
+              "udtName": "text",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "thumbnailUrl",
+              "position": 4,
+              "dataType": "text",
+              "udtName": "text",
+              "nullable": false,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "imageUrls",
+              "position": 5,
+              "dataType": "ARRAY",
+              "udtName": "_text",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "createdAt",
+              "position": 6,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "updatedAt",
+              "position": 7,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "isActive",
+              "position": 8,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "true",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "isQuestion",
+              "position": 9,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "nullable": false,
+              "hasDefault": true,
+              "defaultValue": "true",
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": null,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            },
+            {
+              "name": "authorName",
+              "position": 10,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "nullable": true,
+              "hasDefault": false,
+              "defaultValue": null,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isArray": false,
+              "arrayDimensions": 0,
+              "characterMaxLength": 256,
+              "numericPrecision": null,
+              "numericScale": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": [
+            "id"
+          ],
+          "foreignKeys": [],
+          "indexes": [
+            {
+              "indexName": "post_created_at_idx",
+              "columnNames": [
+                "createdAt"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX post_created_at_idx ON public.post USING btree (\"createdAt\")"
+            },
+            {
+              "indexName": "post_pkey",
+              "columnNames": [
+                "id"
+              ],
+              "isUnique": true,
+              "indexType": "btree",
+              "indexDef": "CREATE UNIQUE INDEX post_pkey ON public.post USING btree (id)"
+            },
+            {
+              "indexName": "post_subject_idx",
+              "columnNames": [
+                "subject"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX post_subject_idx ON public.post USING btree (subject)"
+            },
+            {
+              "indexName": "post_updated_at_idx",
+              "columnNames": [
+                "updatedAt"
+              ],
+              "isUnique": false,
+              "indexType": "btree",
+              "indexDef": "CREATE INDEX post_updated_at_idx ON public.post USING btree (\"updatedAt\")"
+            }
+          ],
+          "rowCount": "-1"
+        }
+      ]
+    }
+  ],
+  "generatedAt": "2025-05-01T16:45:21.030Z"
+}

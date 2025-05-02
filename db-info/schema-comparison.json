@@ -1,0 +1,602 @@
+{
+  "dbSchema": [
+    {
+      "name": "__drizzle_migrations",
+      "schema": "drizzle",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "integer",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "hash",
+          "dataType": "text",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "bigint",
+          "nullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "answer",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "content",
+          "dataType": "text",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "post_id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "customers",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "name",
+          "dataType": "character varying(256)",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "email",
+          "dataType": "character varying(256)",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "phone",
+          "dataType": "character varying(50)",
+          "nullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "address",
+          "dataType": "text",
+          "nullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "forum_posts",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "topic_id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "content",
+          "dataType": "text",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "image_urls",
+          "dataType": "ARRAY",
+          "nullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "author_id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "author_name",
+          "dataType": "character varying(256)",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "is_deleted",
+          "dataType": "boolean",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "post",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "title",
+          "dataType": "character varying(256)",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "content",
+          "dataType": "text",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "customer_id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "topics",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        {
+          "name": "subject",
+          "dataType": "character varying(256)",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "thumbnail_url",
+          "dataType": "text",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "timestamp with time zone",
+          "nullable": true,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "created_by",
+          "dataType": "uuid",
+          "nullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        {
+          "name": "is_active",
+          "dataType": "boolean",
+          "nullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      ]
+    }
+  ],
+  "drizzleSchema": [],
+  "comparison": {
+    "tablesOnlyInDrizzle": [],
+    "tablesOnlyInDb": [
+      {
+        "name": "__drizzle_migrations",
+        "schema": "drizzle",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "integer",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "hash",
+            "dataType": "text",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "bigint",
+            "nullable": true,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          }
+        ]
+      },
+      {
+        "name": "answer",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "content",
+            "dataType": "text",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "post_id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "updated_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          }
+        ]
+      },
+      {
+        "name": "customers",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "name",
+            "dataType": "character varying(256)",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "email",
+            "dataType": "character varying(256)",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "phone",
+            "dataType": "character varying(50)",
+            "nullable": true,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "address",
+            "dataType": "text",
+            "nullable": true,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "updated_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          }
+        ]
+      },
+      {
+        "name": "forum_posts",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "topic_id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "content",
+            "dataType": "text",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "image_urls",
+            "dataType": "ARRAY",
+            "nullable": true,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "author_id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "author_name",
+            "dataType": "character varying(256)",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "updated_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "is_deleted",
+            "dataType": "boolean",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          }
+        ]
+      },
+      {
+        "name": "post",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "title",
+            "dataType": "character varying(256)",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "content",
+            "dataType": "text",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "customer_id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "updated_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          }
+        ]
+      },
+      {
+        "name": "topics",
+        "schema": "public",
+        "columns": [
+          {
+            "name": "id",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": true
+          },
+          {
+            "name": "subject",
+            "dataType": "character varying(256)",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "thumbnail_url",
+            "dataType": "text",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "updated_at",
+            "dataType": "timestamp with time zone",
+            "nullable": true,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "created_by",
+            "dataType": "uuid",
+            "nullable": false,
+            "hasDefault": false,
+            "isPrimaryKey": false
+          },
+          {
+            "name": "is_active",
+            "dataType": "boolean",
+            "nullable": false,
+            "hasDefault": true,
+            "isPrimaryKey": false
+          }
+        ]
+      }
+    ],
+    "tableComparisons": [],
+    "overallMatch": false
+  }
+}

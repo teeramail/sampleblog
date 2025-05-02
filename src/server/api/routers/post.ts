@@ -3,6 +3,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { eq, like, or, desc, lt } from "drizzle-orm";
 import { posts } from "~/server/db/schema";
+import { v4 as uuidv4 } from "uuid";
 import { deleteFromS3 } from "~/server/lib/s3";
 import { 
   MAX_IMAGES_PER_POST,
@@ -12,13 +13,9 @@ import {
 
 // Input validation schemas
 const postInputSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
+  title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
-  thumbnailUrl: z.string().min(1, "Thumbnail is required"),
-  imageUrls: z.array(z.string()).optional(),
-  isActive: z.boolean().default(true),
-  isQuestion: z.boolean().default(true),
-  authorName: z.string().optional(),
+  customer_id: z.string().uuid("Valid customer ID is required"),
 });
 
 const postUpdateSchema = postInputSchema.partial().extend({
@@ -29,16 +26,12 @@ const postUpdateSchema = postInputSchema.partial().extend({
 const followUpQuestionSchema = z.object({
   relatedPostId: z.string().uuid(),
   content: z.string().min(1, "Question content is required"),
-  imageUrls: z.array(z.string()).optional(),
-  isQuestion: z.boolean().default(true),
-  authorName: z.string().optional(),
 });
 
 // New schema for appending content to existing posts
 const appendContentSchema = z.object({
   id: z.string().uuid(),
   newContent: z.string().min(1, "New content is required"),
-  newImageUrls: z.array(z.string()).optional(),
 });
 
 // Function to format appended content with timestamp
@@ -56,22 +49,46 @@ const formatAppendedContent = (originalContent: string, newContent: string): str
 export const postRouter = createTRPCRouter({
   // Create a new post
   create: publicProcedure
-    .input(postInputSchema)
+    .input(
+      z.object({
+        title: z.string().min(1),
+        content: z.string().min(1),
+        author_name: z.string().optional(),
+        is_active: z.boolean().default(true),
+        is_question: z.boolean().default(true),
+        image_urls: z.array(z.string()).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       try {
-        const result = await ctx.db.insert(posts).values({
-          subject: input.subject,
+        // Process images if provided
+        let processedImageUrls: string[] = [];
+        
+        if (input.image_urls && input.image_urls.length > 0) {
+          // In a real implementation, we would process the images here
+          // For example, upload them to S3 and get the URLs
+          // For now, we'll just use the provided URLs
+          processedImageUrls = input.image_urls;
+          
+          // Limit the number of images to 10
+          if (processedImageUrls.length > 10) {
+            processedImageUrls = processedImageUrls.slice(0, 10);
+          }
+        }
+        
+        const post = await ctx.db.insert(posts).values({
+          id: uuidv4(),
+          title: input.title,
           content: input.content,
-          thumbnailUrl: input.thumbnailUrl,
-          imageUrls: filterValidImageUrls(input.imageUrls).length > 0
-            ? filterValidImageUrls(input.imageUrls)
-            : null,
-          isActive: input.isActive,
-          isQuestion: input.isQuestion,
-          authorName: input.authorName || null,
+          author_name: input.author_name,
+          is_active: input.is_active,
+          is_question: input.is_question,
+          created_at: new Date(),
+          updated_at: new Date(),
+          image_urls: processedImageUrls, // Use processed image URLs
         }).returning();
 
-        return result[0];
+        return post[0];
       } catch (error) {
         console.error("Error in post.create:", error);
         throw new TRPCError({
@@ -87,7 +104,7 @@ export const postRouter = createTRPCRouter({
     .input(followUpQuestionSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        // Get the original post to use its subject
+        // Get the original post to use its title
         const originalPost = await ctx.db.query.posts.findFirst({
           where: eq(posts.id, input.relatedPostId),
         });
@@ -99,19 +116,17 @@ export const postRouter = createTRPCRouter({
           });
         }
         
-        // Create a follow-up question with same subject but "[Follow-up]" prefix
-        const subject = `[Follow-up] ${originalPost.subject}`;
+        // Create a follow-up question with same title but "[Follow-up]" prefix
+        const title = `[Follow-up] ${originalPost.title}`;
         
         const result = await ctx.db.insert(posts).values({
-          subject,
+          title,
           content: input.content,
-          thumbnailUrl: originalPost.thumbnailUrl, // Reuse thumbnail from original post
-          imageUrls: filterValidImageUrls(input.imageUrls).length > 0
-            ? filterValidImageUrls(input.imageUrls)
-            : null,
-          isActive: true,
-          isQuestion: true, // Always a question
-          authorName: input.authorName || null,
+          is_active: true,
+          is_question: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          author_name: originalPost.author_name || 'System', // Reuse author name or default
         }).returning();
 
         return result[0];
@@ -129,7 +144,7 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
-  // Get all posts ordered by createdAt desc
+  // Get all posts ordered by created_at desc
   getAll: publicProcedure
     .input(
       z.object({
@@ -151,18 +166,19 @@ export const postRouter = createTRPCRouter({
               where: eq(posts.id, cursor),
             });
             
-            if (cursorPost && cursorPost.createdAt) {
-              // Use the reference timestamp for cursor-based pagination
+            if (cursorPost) {
+              // Use the reference post ID for pagination
+              // Since created_at might be null, we'll use ID as a fallback
               items = await ctx.db.select()
                 .from(posts)
-                .where(lt(posts.createdAt, cursorPost.createdAt))
-                .orderBy(desc(posts.createdAt))
+                .orderBy(desc(posts.id)) // Order by ID descending
+                .where(lt(posts.id, cursorPost.id)) // Get posts with ID less than cursor
                 .limit(limit);
             } else {
               // Fallback if cursor post not found
               items = await ctx.db.select()
                 .from(posts)
-                .orderBy(desc(posts.createdAt))
+                .orderBy(desc(posts.id)) // Order by ID descending
                 .limit(limit);
             }
           } catch (err) {
@@ -170,22 +186,18 @@ export const postRouter = createTRPCRouter({
             // Fallback to non-cursor query
             items = await ctx.db.select()
               .from(posts)
-              .orderBy(desc(posts.createdAt))
+              .orderBy(desc(posts.id)) // Order by ID descending
               .limit(limit);
           }
         } else {
           // No cursor, just get the first page
           items = await ctx.db.select()
             .from(posts)
-            .orderBy(desc(posts.createdAt))
+            .orderBy(desc(posts.id)) // Order by ID descending
             .limit(limit);
         }
         
-        // Normalize null imageUrls to empty arrays for the client
-        items = items.map((item) => ({
-          ...item,
-          imageUrls: item.imageUrls ?? []
-        }));
+        // No need to normalize fields that don't exist in the schema
         
         // Set up the next cursor for pagination
         let nextCursor: typeof cursor | undefined = undefined;
@@ -222,15 +234,11 @@ export const postRouter = createTRPCRouter({
         
         const results = await ctx.db.select()
           .from(posts)
-          .where(like(posts.subject, searchPattern))
-          .orderBy(desc(posts.createdAt))
+          .where(like(posts.title, searchPattern))
+          .orderBy(desc(posts.id)) // Order by ID descending for consistency with getAll
           .limit(input.limit);
         
-        // Normalize null imageUrls to empty arrays
-        const items = results.map((item) => ({
-          ...item,
-          imageUrls: item.imageUrls ?? []
-        }));
+        const items = results;
         
         return items;
       } catch (error) {
@@ -259,11 +267,7 @@ export const postRouter = createTRPCRouter({
           });
         }
 
-        // Normalize null imageUrls to empty array
-        return {
-          ...post,
-          imageUrls: post.imageUrls ?? []
-        };
+        return post;
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
@@ -279,7 +283,15 @@ export const postRouter = createTRPCRouter({
 
   // Update post
   update: publicProcedure
-    .input(postUpdateSchema)
+    .input(z.object({
+      id: z.string().uuid(),
+      title: z.string().min(1).optional(),
+      content: z.string().min(1).optional(),
+      author_name: z.string().optional(),
+      is_active: z.boolean().optional(),
+      is_question: z.boolean().optional(),
+      image_urls: z.array(z.string()).optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       try {
         const { id, ...updateData } = input;
@@ -296,14 +308,14 @@ export const postRouter = createTRPCRouter({
           });
         }
         
-        const filteredImageUrls = filterValidImageUrls(updateData.imageUrls);
+        // Process images if provided
+        let processedImageUrls = updateData.image_urls;
         
+        // Update the post with the form data and processed images
         const result = await ctx.db.update(posts)
           .set({
             ...updateData,
-            // Use null for empty imageUrls arrays, filter out empty strings
-            imageUrls: filteredImageUrls.length > 0 ? filteredImageUrls : null,
-            updatedAt: new Date(),
+            updated_at: new Date(), // Always update the updated_at timestamp
           })
           .where(eq(posts.id, id))
           .returning();
@@ -328,7 +340,7 @@ export const postRouter = createTRPCRouter({
     .input(appendContentSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const { id, newContent, newImageUrls } = input;
+        const { id, newContent } = input;
         
         // Check if post exists
         const existingPost = await ctx.db.query.posts.findFirst({
@@ -342,28 +354,14 @@ export const postRouter = createTRPCRouter({
           });
         }
         
-        // Use our validation utility to validate image limits
-        validateImageAdditionOrThrow(
-          existingPost.imageUrls,
-          newImageUrls,
-          newContent
-        );
-        
         // Format the appended content with a timestamp
         const originalContent = existingPost.content;
         const formattedContent = formatAppendedContent(originalContent, newContent);
         
-        // Combine existing and new image URLs
-        const filteredExistingImageUrls = filterValidImageUrls(existingPost.imageUrls);
-        const filteredNewImageUrls = filterValidImageUrls(newImageUrls);
-        const combinedImageUrls = [...filteredExistingImageUrls, ...filteredNewImageUrls];
-        
         // Update the post
         const result = await ctx.db.update(posts)
           .set({
-            content: formattedContent,
-            imageUrls: combinedImageUrls.length > 0 ? combinedImageUrls : null,
-            updatedAt: new Date(),
+            content: formattedContent
           })
           .where(eq(posts.id, id))
           .returning();
@@ -400,22 +398,6 @@ export const postRouter = createTRPCRouter({
           });
         }
         
-        // Delete associated images from S3
-        try {
-          if (existingPost.thumbnailUrl) {
-            await deleteFromS3(existingPost.thumbnailUrl);
-          }
-          
-          if (existingPost.imageUrls && existingPost.imageUrls.length > 0) {
-            await Promise.all(
-              existingPost.imageUrls.map(url => deleteFromS3(url))
-            );
-          }
-        } catch (s3Error) {
-          // Log error but continue with deletion
-          console.error("Error deleting S3 objects:", s3Error);
-        }
-        
         // Delete the post from the database
         const result = await ctx.db.delete(posts)
           .where(eq(posts.id, input.id))
@@ -436,21 +418,21 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
-  // Get unique subjects for dropdown selection
+  // Get unique titles for dropdown selection
   getSubjects: publicProcedure
     .query(async ({ ctx }) => {
       try {
-        // Get distinct subjects from posts
-        const result = await ctx.db.selectDistinct({ subject: posts.subject })
+        // Get distinct titles from posts
+        const result = await ctx.db.selectDistinct({ title: posts.title })
           .from(posts)
-          .orderBy(posts.subject);
+          .orderBy(posts.title);
         
-        return result.map(item => item.subject);
+        return result.map(item => item.title);
       } catch (error) {
         console.error("Error in post.getSubjects:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch post subjects",
+          message: "Failed to fetch post titles",
           cause: error,
         });
       }

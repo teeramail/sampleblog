@@ -1,19 +1,29 @@
--- Drop post table if it exists
-DROP TABLE IF EXISTS "post";
+-- Add missing columns to the post table
+ALTER TABLE post
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
 
--- Create new post table with correct schema
-CREATE TABLE "post" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  "subject" varchar(256) NOT NULL,
-  "content" text NOT NULL,
-  "thumbnailUrl" text NOT NULL,
-  "imageUrls" text[],
-  "createdAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  "updatedAt" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  "isActive" boolean DEFAULT true NOT NULL
-);
+-- Add comment to explain the purpose of this script
+COMMENT ON TABLE post IS 'Post table with added timestamp columns to match Drizzle schema';
 
--- Create indexes
-CREATE INDEX "post_subject_idx" ON "post" USING btree ("subject");
-CREATE INDEX "post_created_at_idx" ON "post" USING btree ("createdAt");
-CREATE INDEX "post_updated_at_idx" ON "post" USING btree ("updatedAt"); 
+-- Create a function to update the updated_at timestamp automatically
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create a trigger to update the updated_at timestamp automatically
+DROP TRIGGER IF EXISTS update_post_updated_at ON post;
+CREATE TRIGGER update_post_updated_at
+BEFORE UPDATE ON post
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Show the updated schema
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'post'
+ORDER BY ordinal_position;

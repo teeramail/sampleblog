@@ -1,15 +1,31 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { env } from "~/env";
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: env.AWS_REGION ?? "sgp1",
-  endpoint: env.AWS_ENDPOINT,
-  credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID ?? "",
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? "",
-  },
-});
+// Check for AWS configuration
+const isAwsConfigured = env.AWS_REGION && 
+  env.AWS_ENDPOINT && 
+  env.AWS_ACCESS_KEY_ID && 
+  env.AWS_SECRET_ACCESS_KEY && 
+  env.AWS_S3_BUCKET;
+
+// Log warning if AWS is not configured
+if (!isAwsConfigured && env.NODE_ENV !== 'production') {
+  console.warn('AWS configuration is incomplete. S3 operations will be mocked in development mode.');
+}
+
+// Initialize S3 client only if AWS is configured
+let s3Client: S3Client | null = null;
+
+if (isAwsConfigured) {
+  s3Client = new S3Client({
+    region: env.AWS_REGION as string,
+    endpoint: env.AWS_ENDPOINT as string,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+}
 
 // Constants
 const MAX_THUMBNAIL_SIZE = 30 * 1024; // 30KB
@@ -72,34 +88,57 @@ export const uploadToS3 = async (
     ? buildS3Key(id, uniqueFilename, type)
     : buildPostS3Key(id, uniqueFilename, type);
 
-  const command = new PutObjectCommand({
-    Bucket: env.AWS_S3_BUCKET,
-    Key: key,
-    Body: file,
-    ContentType: `image/${filename.split(".").pop()}`,
-    ACL: 'public-read', // Make the file publicly accessible
-  });
+  // If AWS is configured, upload to S3
+  if (isAwsConfigured && s3Client) {
+    const command = new PutObjectCommand({
+      Bucket: env.AWS_S3_BUCKET as string,
+      Key: key,
+      Body: file,
+      ContentType: `image/${filename.split(".").pop()}`,
+      ACL: 'public-read', // Make the file publicly accessible
+    });
 
-  await s3Client.send(command);
+    await s3Client.send(command);
 
-  return {
-    url: `${env.AWS_ENDPOINT}/${env.AWS_S3_BUCKET}/${key}`,
-    key,
-  };
+    const publicUrl = env.AWS_PUBLIC_URL || env.AWS_ENDPOINT;
+    return {
+      url: `${publicUrl}/${env.AWS_S3_BUCKET}/${key}`,
+      key,
+    };
+  } else {
+    // In development mode without AWS, return a mock URL
+    console.log(`[DEV] Mock upload for ${resourceType} ${id}, type: ${type}, size: ${file.length} bytes`);
+    return {
+      url: `https://mock-s3.example.com/${key}`,
+      key,
+    };
+  }
 };
 
 // Delete a file from S3
 export const deleteFromS3 = async (key: string): Promise<void> => {
-  const command = new DeleteObjectCommand({
-    Bucket: env.AWS_S3_BUCKET,
-    Key: key,
-  });
+  // If AWS is configured, delete from S3
+  if (isAwsConfigured && s3Client) {
+    const command = new DeleteObjectCommand({
+      Bucket: env.AWS_S3_BUCKET as string,
+      Key: key,
+    });
 
-  await s3Client.send(command);
+    await s3Client.send(command);
+  } else {
+    // In development mode without AWS, just log the deletion
+    console.log(`[DEV] Mock delete from S3: ${key}`);
+  }
 };
 
 // Count existing images for a customer
 export const countCustomerImages = async (customerId: string): Promise<number> => {
+  // If AWS is not configured, return a mock count of 0
+  if (!isAwsConfigured || !s3Client) {
+    console.log(`[DEV] Mock count customer images for ${customerId}: 0`);
+    return 0;
+  }
+  
   const rootFolder = env.AWS_S3_ROOT_FOLDER;
   const prefix = `${rootFolder}/customer/${customerId}/images/`;
   let count = 0;
@@ -107,7 +146,7 @@ export const countCustomerImages = async (customerId: string): Promise<number> =
   try {
     // List objects with the customer's images prefix
     const command = new ListObjectsV2Command({
-      Bucket: env.AWS_S3_BUCKET,
+      Bucket: env.AWS_S3_BUCKET as string,
       Prefix: prefix,
     });
 
@@ -115,7 +154,13 @@ export const countCustomerImages = async (customerId: string): Promise<number> =
     count = response.Contents?.length ?? 0;
   } catch (error) {
     console.error("Error counting customer images:", error);
-    throw error;
+    // In development, don't throw errors for S3 operations
+    if (env.NODE_ENV === 'production') {
+      throw error;
+    } else {
+      console.warn('[DEV] Error ignored in development mode');
+      return 0;
+    }
   }
 
   return count;
@@ -123,6 +168,12 @@ export const countCustomerImages = async (customerId: string): Promise<number> =
 
 // Count existing images for a post
 export const countPostImages = async (postId: string): Promise<number> => {
+  // If AWS is not configured, return a mock count of 0
+  if (!isAwsConfigured || !s3Client) {
+    console.log(`[DEV] Mock count post images for ${postId}: 0`);
+    return 0;
+  }
+  
   const rootFolder = env.AWS_S3_ROOT_FOLDER;
   const prefix = `${rootFolder}/post/${postId}/gallery/`;
   let count = 0;
@@ -130,7 +181,7 @@ export const countPostImages = async (postId: string): Promise<number> => {
   try {
     // List objects with the post's gallery prefix
     const command = new ListObjectsV2Command({
-      Bucket: env.AWS_S3_BUCKET,
+      Bucket: env.AWS_S3_BUCKET as string,
       Prefix: prefix,
     });
 
@@ -138,7 +189,13 @@ export const countPostImages = async (postId: string): Promise<number> => {
     count = response.Contents?.length ?? 0;
   } catch (error) {
     console.error("Error counting post images:", error);
-    throw error;
+    // In development, don't throw errors for S3 operations
+    if (env.NODE_ENV === 'production') {
+      throw error;
+    } else {
+      console.warn('[DEV] Error ignored in development mode');
+      return 0;
+    }
   }
 
   return count;
@@ -166,6 +223,25 @@ export const uploadMultipleImages = async (
     }
   }
 
+  // If AWS is not configured, log the upload operation in development mode
+  if (!isAwsConfigured && env.NODE_ENV !== 'production') {
+    console.log(`[DEV] Mock upload multiple images for ${resourceType} ${id}, count: ${files.length}`);
+    
+    // Return mock results
+    return files.map((file, index) => {
+      const uniqueFilename = generateUniqueFilename(file.originalname);
+      const key = resourceType === "customer" 
+        ? buildS3Key(id, uniqueFilename, type)
+        : buildPostS3Key(id, uniqueFilename, type);
+      
+      return {
+        url: `https://mock-s3.example.com/${key}?index=${index}`,
+        key,
+      };
+    });
+  }
+
+  // Normal upload process when AWS is configured
   const uploadPromises = files.map((file) =>
     uploadToS3(file.buffer, file.originalname, id, type, resourceType)
   );

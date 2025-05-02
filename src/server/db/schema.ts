@@ -1,4 +1,4 @@
-// Customer Management App Schema
+// Customer Management App Schema with Forum Feature
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
 import { sql } from "drizzle-orm";
@@ -45,27 +45,21 @@ export const posts = createTable(
   "post",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    subject: d.varchar({ length: 256 }).notNull(),
+    title: d.varchar({ length: 256 }).notNull(),
     content: d.text().notNull(),
-    thumbnailUrl: d.text().notNull(),
-    // Define imageUrls as text[] to match PostgreSQL ARRAY type
-    imageUrls: d.text().array(),
-    createdAt: d
-      .timestamp({ withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    isActive: d.boolean().default(true).notNull(),
-    // Adding new field to mark this as a question post
-    isQuestion: d.boolean().default(true).notNull(),
-    authorName: d.varchar({ length: 256 }),  // Optional author name
+    // customer_id column has been removed from the actual database
+    // Database uses snake_case for column names
+    image_urls: d.text().array(),
+    created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`),
+    updated_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`),
+    is_active: d.boolean().default(true).notNull(),
+    is_question: d.boolean().default(true).notNull(),
+    author_name: d.varchar({ length: 256 }),
   }),
   (t) => [
-    index("post_subject_idx").on(t.subject),
-    index("post_created_at_idx").on(t.createdAt),
-    index("post_updated_at_idx").on(t.updatedAt)
+    index("post_title_idx").on(t.title),
+    index("post_created_at_idx").on(t.created_at),
+    index("post_updated_at_idx").on(t.updated_at)
   ],
 );
 
@@ -94,14 +88,69 @@ export const answers = createTable(
   ],
 );
 
+// Forum feature schema
+export const topics = createTable(
+  "topics",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    subject: d.varchar({ length: 256 }).notNull(),
+    thumbnailUrl: d.text().notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdBy: d.uuid().notNull(),
+    isActive: d.boolean().default(true).notNull(),
+  }),
+  (t) => [
+    index("topics_subject_idx").on(t.subject),
+    index("topics_created_by_idx").on(t.createdBy),
+    index("topics_created_at_idx").on(t.createdAt),
+    index("topics_updated_at_idx").on(t.updatedAt)
+  ],
+);
+
+export const forumPosts = createTable(
+  "forum_posts",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    topicId: d.uuid().notNull().references(() => topics.id, { onDelete: "cascade" }),
+    content: d.text().notNull(),
+    imageUrls: d.text().array(),
+    authorId: d.uuid().notNull(),
+    authorName: d.varchar({ length: 256 }).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isDeleted: d.boolean().default(false).notNull(),
+  }),
+  (t) => [
+    index("forum_posts_topic_id_idx").on(t.topicId),
+    index("forum_posts_author_id_idx").on(t.authorId),
+    index("forum_posts_created_at_idx").on(t.createdAt)
+  ],
+);
+
 // Establish relationships
 export const postsRelations = relations(posts, ({ many }) => ({
   answers: many(answers),
 }));
 
-export const answersRelations = relations(answers, ({ one }) => ({
-  post: one(posts, {
-    fields: [answers.postId],
-    references: [posts.id],
+// Forum relationships
+export const topicsRelations = relations(topics, ({ many }) => ({
+  posts: many(forumPosts),
+}));
+
+export const forumPostsRelations = relations(forumPosts, ({ one }) => ({
+  topic: one(topics, {
+    fields: [forumPosts.topicId],
+    references: [topics.id],
   }),
 }));

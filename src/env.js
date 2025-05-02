@@ -23,6 +23,7 @@ export const env = createEnv({
     AWS_S3_BUCKET: z.string().optional(),
     AWS_REGION: z.string().optional(),
     AWS_ENDPOINT: z.string().url().optional(),
+    AWS_PUBLIC_URL: z.string().url().optional(),
     AWS_S3_ROOT_FOLDER: z.string().optional().default("realland-app"),
     // Auth
     AUTH_SECRET: z.string().optional(),
@@ -56,6 +57,7 @@ export const env = createEnv({
     AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
     AWS_REGION: process.env.AWS_REGION,
     AWS_ENDPOINT: process.env.AWS_ENDPOINT,
+    AWS_PUBLIC_URL: process.env.AWS_PUBLIC_URL,
     AWS_S3_ROOT_FOLDER: process.env.AWS_S3_ROOT_FOLDER,
     // Auth
     AUTH_SECRET: process.env.AUTH_SECRET,

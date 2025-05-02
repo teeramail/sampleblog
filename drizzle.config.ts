@@ -5,13 +5,13 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-// Use only the keepdoc database configuration
+// Configuration for the realestate database
 export default defineConfig({
   ...baseConfig,
   dbCredentials: {
-    // Use the DATABASE_URL directly, which should point to the keepdoc database
+    // Use the DATABASE_URL for the realestate database
     url: process.env.DATABASE_URL!,
   },
-  // This file will now replace the multi-database configuration
-  out: "./drizzle/keepdoc",
+  // Output migrations to the realestate directory
+  out: "./drizzle/realestate",
 });
